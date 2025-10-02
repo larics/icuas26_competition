@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="aruco_marker_5">
+    <static>true</static>
+    <link name="link">
+      <!-- ArUco Marker 0 -->
+      <visual name="aruco_marker_5_vis">
+        <pose>0 0 0 0 0 0</pose> <!-- Position: x, y, z; Rotation: roll, pitch, yaw -->
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal> <!-- Normal vector for the plane -->
+            <size>0.25 0.25</size>   <!-- Size of the marker -->
+          </plane>
+        </geometry>
+        <material>
+          <pbr>
+            <metal>
+              <albedo_map>marker_0005.png</albedo_map>
+              <metalness>0.0</metalness>
+            </metal>
+          </pbr>
+          <ambient>1 1 1 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0 0 0 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

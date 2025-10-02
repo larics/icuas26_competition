@@ -1,0 +1,281 @@
+# named list of all robots
+robots:
+  # cf:
+  #   enabled: false
+  #   uri: radio://0/80/2M/E7E7E7E7E7
+  #   # uri: udp://0.0.0.0:19850
+  #   # uri: usb://0
+  #   initial_position: [0.0, 0.0, 0.0]
+  #   type: cf  # see robot_types
+  #   # firmware_params:
+  #   #   kalman:
+  #   #     pNAcc_xy: 1.0 # default 0.5
+
+  cf_1:
+    enabled: true
+    uri: udp://0.0.0.0:19850
+    initial_position: [0.0, -4.0, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_2:
+    enabled: true
+    uri: udp://0.0.0.0:19851
+    initial_position: [0.0,-4.5, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_3:
+    enabled: true
+    uri: udp://0.0.0.0:19852
+    initial_position: [-0.5,-4.0, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_4:
+    enabled: true
+    uri: udp://0.0.0.0:19853
+    initial_position: [-0.5,-4.5, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_5:
+    enabled: true
+    uri: udp://0.0.0.0:19854
+    initial_position: [0.5, -4.0, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_6:
+    enabled: false
+    uri: udp://0.0.0.0:19855
+    initial_position: [0.5, -4.5, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_7:
+    enabled: false
+    uri: udp://0.0.0.0:19856
+    initial_position: [1.0, -4.0, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_8:
+    enabled: false
+    uri: udp://0.0.0.0:19857
+    initial_position: [1.0,-4.5, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_9:
+    enabled: false
+    uri: udp://0.0.0.0:19858
+    initial_position: [-1.0,-4.0, 0.0]
+    type: cf_sim  # see robot_types
+
+  cf_10:
+    enabled: false
+    uri: udp://0.0.0.0:19859
+    initial_position: [-1.0,-4.5, 0.0]
+    type: cf_sim  # see robot_types
+
+  # cf_11:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19860
+  #   initial_position: [2.0, 0.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_12:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19861
+  #   initial_position: [2.0, 1.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_13:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19862
+  #   initial_position: [3.0, 2.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_14:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19863
+  #   initial_position: [3.0, 3.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_15:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19864
+  #   initial_position: [3.0, 4.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_16:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19865
+  #   initial_position: [3.0, 0.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_17:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19866
+  #   initial_position: [3.0, 1.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_18:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19867
+  #   initial_position: [3.0, 2.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_19:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19868
+  #   initial_position: [3.0, 3.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_20:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19869
+  #   initial_position: [3.0, 4.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_21:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19870
+  #   initial_position: [4.0, 0.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_22:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19871
+  #   initial_position: [4.0, 1.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_23:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19872
+  #   initial_position: [4.0, 2.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_24:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19873
+  #   initial_position: [4.0, 3.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+  # cf_25:
+  #   enabled: true
+  #   uri: udp://0.0.0.0:19874
+  #   initial_position: [4.0, 4.0, 0.0]
+  #   type: cf_sim  # see robot_types
+
+# Definition of the various robot types
+robot_types:
+  cf_sim:
+    motion_capture:
+      enabled: false
+      # only if enabled; see motion_capture.yaml
+      # marker: default_single_marker
+      # dynamics: default
+    big_quad: false
+    # battery:
+    #   voltage_warning: 3.8  # V
+    #   voltage_critical: 3.7 # V
+    firmware_logging:
+      enabled: true
+      default_topics:
+        pose:
+          frequency: 10
+        odom:
+          frequency: 10
+      custom_topics:
+        velocity:
+          frequency: 50
+          vars: ["kalman.statePX", "kalman.statePY", "kalman.statePZ"]
+
+  cf:
+    motion_capture:
+      enabled: true
+      # only if enabled; see motion_capture.yaml
+      marker: cf_mpc
+      dynamics: default
+    big_quad: false
+    battery:
+      voltage_warning: 3.8  # V
+      voltage_critical: 3.7 # V
+    # firmware_params:
+    #   kalman:
+    #     pNAcc_xy: 1.0 # default 0.5
+    firmware_logging:
+      enabled: true
+      default_topics:
+        pose:
+          frequency: 100
+      custom_topics:
+        velocity:
+          frequency: 100
+          vars: ["kalman.statePX", "kalman.statePY", "kalman.statePZ"]
+
+  cf_mocap_deck:
+    motion_capture:
+      enabled: true
+      # only if enabled; see motion_capture.yaml
+      marker: mocap_deck
+      dynamics: default
+    big_quad: false
+    battery:
+      voltage_warning: 3.8  # V
+      voltage_critical: 3.7 # V
+
+    # firmware_params:
+    #   kalman:
+    #     pNAcc_xy: 1.0 # default 0.5
+
+# global settings for all robots
+all:
+  # firmware logging for all drones (use robot_types/type_name to set per type, or
+  # robots/drone_name to set per drone)
+  # firmware_logging:
+  #   enabled: false
+  #   default_topics:
+  #    # remove to disable default topic
+  #     pose:
+  #       frequency: 10 # Hz
+      # odom:
+      #   frequency: 100 # Hz
+    # custom_topics:
+    #  topic_name1:
+    #    frequency: 10 # Hz
+    #    vars: ["kalman.stateX", "kalman.stateY", "kalman.stateZ"]
+    #  topic_name2:
+    #    frequency: 1 # Hz
+    #    vars: ["stabilizer.roll", "stabilizer.pitch", "stabilizer.yaw"]
+  # firmware parameters for all drones (use robot_types/type_name to set per type, or
+  # robots/drone_name to set per drone)
+  firmware_params:
+    commander:
+      enHighLevel: 1
+    stabilizer:
+      estimator: 2 # 1: complementary, 2: kalman
+      controller: 1 # 1: PID, 2: mellinger
+    # pid_attitude:
+    #   roll_kp: 10
+    #   roll_ki: 0
+    #   roll_kd: 0
+    #   pitch_kp: 10
+    #   pitch_ki: 0
+    #   pitch_kd: 0
+    # pid_rate:
+    #   roll_kp: 500
+    #   roll_ki: 500
+    #   roll_kd: 3.6
+    #   pitch_kp: 500
+    #   pitch_ki: 500
+    #   pitch_kd: 3.6
+    #   rateFiltEn: 1
+    # ring:
+    #   effect: 16 # 6: double spinner, 7: solid color, 16: packetRate
+    #   solidBlue: 255 # if set to solid color
+    #   solidGreen: 0 # if set to solid color
+    #   solidRed: 0 # if set to solid color
+    #   headlightEnable: 0
+    locSrv:
+      extPosStdDev: 1e-3
+      extQuatStdDev: 0.5e-1
+    # kalman:
+    #   resetEstimation: 1
+  broadcasts:
+    num_repeats: 15 # number of times broadcast commands are repeated
+    delay_between_repeats_ms: 1 # delay in milliseconds between individual repeats

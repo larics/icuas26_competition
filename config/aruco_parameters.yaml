@@ -1,0 +1,79 @@
+/cf_1/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_1/image
+    camera_info_topic: /cf_1/camera_info
+    camera_frame: world
+
+/cf_2/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_2/image
+    camera_info_topic: /cf_2/camera_info
+    camera_frame: world
+
+/cf_3/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_3/image
+    camera_info_topic: /cf_3/camera_info
+    camera_frame: world
+
+/cf_4/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_4/image
+    camera_info_topic: /cf_4/camera_info
+    camera_frame: world
+
+/cf_5/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_5/image
+    camera_info_topic: /cf_5/camera_info
+    camera_frame: world
+
+/cf_6/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_6/image
+    camera_info_topic: /cf_6/camera_info
+    camera_frame: world
+
+/cf_7/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_7/image
+    camera_info_topic: /cf_7/camera_info
+    camera_frame: world
+
+/cf_8/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_8/image
+    camera_info_topic: /cf_8/camera_info
+    camera_frame: world
+
+/cf_9/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_9/image
+    camera_info_topic: /cf_9/camera_info
+    camera_frame: world
+
+/cf_10/aruco_node:
+  ros__parameters:
+    marker_size: 0.25
+    aruco_dictionary_id: DICT_5X5_250
+    image_topic: /cf_10/image
+    camera_info_topic: /cf_10/camera_info
+    camera_frame: world

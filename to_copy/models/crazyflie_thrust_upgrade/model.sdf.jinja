@@ -1,0 +1,355 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+    <model name="crazyflie_{{ cf_id }}_thrust_upgrade">
+        <pose>0 0 0 0 0 0</pose>
+        <static>false</static>
+        <link name="base_link">
+            <inertial>
+                <mass>0.025</mass>
+                <inertia>
+                    <ixx>0.000016656</ixx>
+                    <ixy>0.00</ixy>
+                    <ixz>0.00</ixz>
+                    <iyy>0.000016656</iyy>
+                    <iyz>0.00000</iyz>
+                    <izz>0.000029262</izz>
+                </inertia>
+            </inertial>
+        <collision name="body_collision">
+            <pose>0 0 0 0 0 0</pose>
+            <geometry>
+                <box>
+                    <size>0.10 0.10 0.03</size>
+                </box>
+            </geometry>
+        </collision>
+        <visual name="body_visual">
+            <pose>0 0 0 0 -0 0</pose>
+            <geometry>
+                <mesh>
+                    <scale>1 1 1</scale>
+                    <uri>model://crazyflie/../../../../meshes/collada_files/cf2_assembly.dae</uri>
+                </mesh>
+            </geometry>
+        </visual>
+        <sensor name="air_pressure_sensor" type="air_pressure">
+            <topic>/cf_{{ cf_id }}/baro</topic>
+            <always_on>1</always_on>
+            <update_rate>50</update_rate>
+            <air_pressure>
+            <pressure>
+                <noise type="gaussian">
+                <mean>0</mean>
+                <stddev>0.01</stddev>
+                </noise>
+            </pressure>
+            </air_pressure>
+        </sensor>
+        <sensor name="imu_sensor" type="imu">
+            <topic>/cf_{{ cf_id }}/imu</topic>
+            <always_on>1</always_on>
+            <update_rate>1000</update_rate>
+        </sensor>
+        <sensor name="camera_sensor" type="camera">
+            <camera>
+                <horizontal_fov>1.047</horizontal_fov>
+                <image>
+                    <width>320</width>
+                    <height>240</height>
+                </image>
+                <clip>
+                    <near>0.1</near>
+                    <far>100</far>
+                </clip>
+            </camera>
+            <always_on>1</always_on>
+            <update_rate>30</update_rate>
+            <visualize>true</visualize>
+            <topic>/cf_{{ cf_id }}/camera</topic>
+        </sensor>
+        </link>
+        <link name="m1_prop">
+            <gravity>true</gravity>
+            <self_collide>false</self_collide>
+            <velocity_decay/>
+            <pose>0.031 -0.031 0.021 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0 0 -0 0</pose>
+                <mass>0.0008</mass>
+                <inertia>
+                    <ixx>0.000000002</ixx>
+                    <iyy>0.000000167</iyy>
+                    <izz>0.000000168</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <visual name="m1_visual">
+                <pose>0 0 0 0 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>model://crazyflie/../../../../meshes/collada_files/ccw_prop.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="m2_prop">
+            <gravity>true</gravity>
+            <self_collide>false</self_collide>
+            <velocity_decay/>
+            <pose>-0.031 -0.031 0.021 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0 0 -0 0</pose>
+                <mass>0.0008</mass>
+                <inertia>
+                    <ixx>0.000000002</ixx>
+                    <iyy>0.000000167</iyy>
+                    <izz>0.000000168</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <visual name="m2_visual">
+                <pose>0 0 0 0 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>model://crazyflie/../../../../meshes/collada_files/cw_prop.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="m3_prop">
+            <gravity>true</gravity>
+            <self_collide>false</self_collide>
+            <velocity_decay/>
+            <pose >-0.031 0.031 0.021 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0 0 -0 0</pose>
+                <mass>0.0008</mass>
+                <inertia>
+                    <ixx>0.000000002</ixx>
+                    <iyy>0.000000167</iyy>
+                    <izz>0.000000168</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <visual name="m3_visual">
+                <pose>0 0 0 0 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>model://crazyflie/../../../../meshes/collada_files/ccw_prop.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <link name="m4_prop">
+            <gravity>true</gravity>
+            <self_collide>false</self_collide>
+            <velocity_decay/>
+            <pose>0.031 0.031 0.021 0 0 0</pose>
+            <inertial>
+                <pose>0 0 0 0 -0 0</pose>
+                <mass>0.0008</mass>
+                <inertia>
+                    <ixx>0.000000002</ixx>
+                    <iyy>0.000000167</iyy>
+                    <izz>0.000000168</izz>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyz>0</iyz>
+                </inertia>
+            </inertial>
+            <visual name="m4_visual">
+                <pose>0 0 0 0 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <scale>1 1 1</scale>
+                        <uri>model://crazyflie/../../../../meshes/collada_files/cw_prop.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+        </link>
+        <joint name="m1_joint" type="revolute">
+            <child>m1_prop</child>
+            <parent>base_link</parent>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-1e+16</lower>
+                    <upper>1e+16</upper>
+                </limit>
+                <dynamics>
+                    <spring_reference>0</spring_reference>
+                    <spring_stiffness>0</spring_stiffness>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="m2_joint" type="revolute">
+            <child>m2_prop</child>
+            <parent>base_link</parent>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-1e+16</lower>
+                    <upper>1e+16</upper>
+                </limit>
+                <dynamics>
+                    <spring_reference>0</spring_reference>
+                    <spring_stiffness>0</spring_stiffness>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="m3_joint" type="revolute">
+            <child>m3_prop</child>
+            <parent>base_link</parent>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-1e+16</lower>
+                    <upper>1e+16</upper>
+                </limit>
+                <dynamics>
+                    <spring_reference>0</spring_reference>
+                    <spring_stiffness>0</spring_stiffness>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="m4_joint" type="revolute">
+            <child>m4_prop</child>
+            <parent>base_link</parent>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-1e+16</lower>
+                    <upper>1e+16</upper>
+                </limit>
+                <dynamics>
+                    <spring_reference>0</spring_reference>
+                    <spring_stiffness>0</spring_stiffness>
+                </dynamics>
+            </axis>
+        </joint>
+        <plugin
+            filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+            <robotNamespace>cf_{{ cf_id }}</robotNamespace>
+            <jointName>m1_joint</jointName>
+            <linkName>m1_prop</linkName>
+            <turningDirection>ccw</turningDirection>
+            <timeConstantUp>0.09</timeConstantUp>
+            <timeConstantDown>0.1</timeConstantDown>
+            <maxRotVelocity>3052</maxRotVelocity>
+            <motorConstant>2.3947e-8</motorConstant>
+            <momentConstant>0.005964552</momentConstant>
+            <commandSubTopic>command/motor_speed</commandSubTopic>
+            <actuator_number>0</actuator_number>
+            <rotorDragCoefficient>9.1785e-7</rotorDragCoefficient>
+            <rollingMomentCoefficient>0.0000001</rollingMomentCoefficient>
+            <motorSpeedPubTopic>motor_speed/0</motorSpeedPubTopic>
+            <rotorVelocitySlowdownSim>70</rotorVelocitySlowdownSim>
+            <motorType>velocity</motorType>
+        </plugin>
+        <plugin
+            filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+            <robotNamespace>cf_{{ cf_id }}</robotNamespace>
+            <jointName>m2_joint</jointName>
+            <linkName>m2_prop</linkName>
+            <turningDirection>cw</turningDirection>
+            <timeConstantUp>0.09</timeConstantUp>
+            <timeConstantDown>0.1</timeConstantDown>
+            <maxRotVelocity>3052</maxRotVelocity>
+            <motorConstant>2.3947e-8</motorConstant>
+            <momentConstant>0.005964552</momentConstant>
+            <commandSubTopic>command/motor_speed</commandSubTopic>
+            <actuator_number>1</actuator_number>
+            <rotorDragCoefficient>9.1785e-7</rotorDragCoefficient>
+            <rollingMomentCoefficient>0.0000001</rollingMomentCoefficient>
+            <motorSpeedPubTopic>motor_speed/1</motorSpeedPubTopic>
+            <rotorVelocitySlowdownSim>70</rotorVelocitySlowdownSim>
+            <motorType>velocity</motorType>
+        </plugin>
+        <plugin
+            filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+            <robotNamespace>cf_{{ cf_id }}</robotNamespace>
+            <jointName>m3_joint</jointName>
+            <linkName>m3_prop</linkName>
+            <turningDirection>ccw</turningDirection>
+            <timeConstantUp>0.09</timeConstantUp>
+            <timeConstantDown>0.1</timeConstantDown>
+            <maxRotVelocity>3052</maxRotVelocity>
+            <motorConstant>2.3947e-8</motorConstant>
+            <momentConstant>0.005964552</momentConstant>
+            <commandSubTopic>command/motor_speed</commandSubTopic>
+            <actuator_number>2</actuator_number>
+            <rotorDragCoefficient>9.1785e-7</rotorDragCoefficient>
+            <rollingMomentCoefficient>0.0000001</rollingMomentCoefficient>
+            <motorSpeedPubTopic>motor_speed/2</motorSpeedPubTopic>
+            <rotorVelocitySlowdownSim>70</rotorVelocitySlowdownSim>
+            <motorType>velocity</motorType>
+        </plugin>
+        <plugin
+            filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+            <robotNamespace>cf_{{ cf_id }}</robotNamespace>
+            <jointName>m4_joint</jointName>
+            <linkName>m4_prop</linkName>
+            <turningDirection>cw</turningDirection>
+            <timeConstantUp>0.09</timeConstantUp>
+            <timeConstantDown>0.1</timeConstantDown>
+            <maxRotVelocity>3052</maxRotVelocity>
+            <motorConstant>2.3947e-8</motorConstant>
+            <momentConstant>0.005964552</momentConstant>
+            <commandSubTopic>command/motor_speed</commandSubTopic>
+            <actuator_number>3</actuator_number>
+            <rotorDragCoefficient>9.1785e-7</rotorDragCoefficient>
+            <rollingMomentCoefficient>0.000001</rollingMomentCoefficient>
+            <motorSpeedPubTopic>motor_speed/3</motorSpeedPubTopic>
+            <rotorVelocitySlowdownSim>70</rotorVelocitySlowdownSim>
+            <motorType>velocity</motorType>
+        </plugin> 
+        <plugin
+            filename="gz-sim-odometry-publisher-system"
+            name="gz::sim::systems::OdometryPublisher">
+            <dimensions>3</dimensions>
+            <odom_publish_frequency>200</odom_publish_frequency>
+            <odom_topic>/cf_{{ cf_id }}/odom</odom_topic>
+        </plugin>
+        <plugin
+            filename="gz_crazysim_plugin"
+            name="crazyflie_interface::GzCrazyflieInterface">
+            <imuSubTopic>/imu</imuSubTopic>
+            <magSubTopic>/mag</magSubTopic>
+            <baroSubTopic>/baro</baroSubTopic>
+            <cffirm_addr>INADDR_ANY</cffirm_addr>
+            <cffirm_port>{{ cffirm_udp_port }}</cffirm_port>
+            <cflib_addr>INADDR_ANY</cflib_addr>
+            <cflib_port>{{ cflib_udp_port }}</cflib_port>
+            <cfPrefix>{{ cf_name }}</cfPrefix>
+            <cfId>{{ cf_id }}</cfId>
+        </plugin>
+        <plugin filename="libgz-sim-linearbatteryplugin-system.so" name="ignition::gazebo::systems::LinearBatteryPlugin">
+            <battery_name>linear_battery</battery_name>
+            <voltage>3.7</voltage>
+            <open_circuit_voltage_constant_coef>3.7</open_circuit_voltage_constant_coef>
+            <open_circuit_voltage_linear_coef>0</open_circuit_voltage_linear_coef>
+            <initial_charge>0.250</initial_charge>
+            <capacity>0.250</capacity>
+            <resistance>0.09</resistance>
+            <power_load>4.23</power_load>
+            <enable_recharge>true</enable_recharge>
+            <recharge_by_topic>true</recharge_by_topic>
+            <charging_time>0.17</charging_time>
+            <start_on_motion>true</start_on_motion>
+            <fix_issue_225>true</fix_issue_225>
+        </plugin>
+    </model>
+</sdf>

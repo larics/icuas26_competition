@@ -1,0 +1,19 @@
+name: icuas_competition_example
+root: ./
+startup_window: crazyflies_start
+pre_window: |
+  source <%= @settings["setup_name"] %>
+windows:
+  - crazyflies_start:
+      layout: tiled
+      panes:
+        - bash /root/CrazySim/ros2_ws/src/icuas25_competition/launch/sitl_multiagent_text.sh -m crazyflie -f $SPAWN_POSE_DOC -w $ENV_NAME -n $NUM_ROBOTS
+        - waitForCfGazebo;sleep 8;bash ./generate_gazebo_bridge_yaml.sh $NUM_ROBOTS; ros2 launch icuas25_competition cf_velmux_launch.py
+        - waitForCfGazebo;sleep 10;ros2 launch icuas25_competition aruco_recognition.launch.py
+        - waitForCfGazebo;sleep 10;ros2 launch icuas25_competition octomap_server.launch.py
+  - topic_pane:
+      layout: tiled
+      panes:
+        - history -s "ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args --remap cmd_vel:=/cf_1/cmd_vel"
+
+ 
