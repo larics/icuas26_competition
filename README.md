@@ -29,7 +29,7 @@ If you have an NVIDIA GPU, please install `nvidia-container-toolkit` by followin
 
 Clone the this repository:
 ```
-git clone git@github.com:larics/icuas25_competition.git
+git clone git@github.com:larics/icuas26_competition.git
 ```
 Add  to  `~/.bashrc` and source it, or type in the current terminal:
 ```
@@ -77,7 +77,7 @@ The containers `crazysim_icuas_cont` consists of packages for Crazyflies simulat
 
 ### RUN EMPTY WORLD EXAMPLE
 
-Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas25_competition/startup` (you can use alias `cd_icuas25_competition` that will place you in icuas25_competition package). Start the example: 
+Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_competition/startup` (you can use alias `cd_icuas26_competition` that will place you in icuas26_competition package). Start the example: 
 
 ```
 ./start.sh
@@ -86,7 +86,7 @@ Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas25_compe
 If needed, make startup script executable with `chmod +x start.sh`. It starts the example with 5 Crazyflies and 5 aruco markers in an empty world. To test that everything is working, in the first pane of the second window you can start `teleop_twist`, which is already in history. It controls the Crazyflie with id `cf_1`.
 
 ### RUN CITY_1 WORLD EXAMPLE
-Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas25_competition/startup`. Edit the `_setup.sh` script to export `ENV_NAME=city_1_world`, then start everything with:
+Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_competition/startup`. Edit the `_setup.sh` script to export `ENV_NAME=city_1_world`, then start everything with:
 ```
 ./start.sh
 ```
