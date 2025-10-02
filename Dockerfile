@@ -159,7 +159,7 @@ RUN cd $HOME/CrazySim/crazyflie-firmware \
 #install other ROS2 ws packages
 WORKDIR $HOME/CrazySim/ros2_ws/src
 RUN git clone https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco.git 
-RUN --mount=type=ssh git clone git@github.com:larics/icuas25_competition.git
+RUN --mount=type=ssh git clone git@github.com:larics/icuas26_competition.git
 RUN --mount=type=ssh git clone git@github.com:larics/icuas25_msgs.git
 
 WORKDIR $HOME/CrazySim/ros2_ws/src/crazyflie/scripts
@@ -179,7 +179,7 @@ COPY to_copy/models $HOME/CrazySim/crazyflie-firmware/tools/crazyflie-simulation
 RUN echo "export PATH='$HOME/.local/bin:$PATH'" >> $HOME/.bashrc
 
 # Add useful aliases
-RUN echo "alias cd_icuas25_competition='cd /root/CrazySim/ros2_ws/src/icuas25_competition'" >> $HOME/.bashrc
+RUN echo "alias cd_icuas26_competition='cd /root/CrazySim/ros2_ws/src/icuas26_competition'" >> $HOME/.bashrc
 
 
 RUN apt install libboost-program-options-dev libusb-1.0-0-dev
