@@ -2,7 +2,7 @@
 
 """
 A crazyflie server for communicating with several crazyflies
-    based on the official crazyflie python library from 
+    based on the official crazyflie python library from
     Bitcraze AB
 
 
@@ -20,16 +20,18 @@ import cflib.crtp
 from cflib.crazyflie.swarm import CachedCfFactory
 from cflib.crazyflie.swarm import Swarm
 from cflib.crazyflie.log import LogConfig
-from cflib.crazyflie.mem import MemoryElement, Poly4D
+from cflib.crazyflie.mem import MemoryElement
+from cflib.crazyflie.mem import Poly4D
 
 from crazyflie_interfaces.srv import Takeoff, Land, GoTo, RemoveLogging, AddLogging
 from crazyflie_interfaces.srv import UploadTrajectory, StartTrajectory, NotifySetpointsStop
+from crazyflie_interfaces.srv import Arm
 from rcl_interfaces.msg import ParameterDescriptor, SetParametersResult, ParameterType
-from crazyflie_interfaces.msg import Hover, AttitudeSetpoint
-from crazyflie_interfaces.msg import LogDataGeneric
+from crazyflie_interfaces.msg import Position, Status, Hover, LogDataGeneric, FullState, AttitudeSetpoint
 from motion_capture_tracking_interfaces.msg import NamedPoseArray
 
 from std_srvs.srv import Empty
+from std_msgs.msg import String
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import PoseStamped, TransformStamped
 from sensor_msgs.msg import LaserScan
@@ -41,7 +43,7 @@ from tf2_ros import TransformBroadcaster
 from functools import partial
 from math import degrees, radians, pi, isnan
 
-cf_log_to_ros_param = {
+type_cf_param_to_ros_param = {
     "uint8_t": ParameterType.PARAMETER_INTEGER,
     "uint16_t": ParameterType.PARAMETER_INTEGER,
     "uint32_t": ParameterType.PARAMETER_INTEGER,
@@ -52,6 +54,21 @@ cf_log_to_ros_param = {
     "float": ParameterType.PARAMETER_DOUBLE,
     "double": ParameterType.PARAMETER_DOUBLE,
 }
+
+type_cf_param_to_index = {
+    'uint8_t': 0x08,
+    'uint16_t': 0x09,
+    'uint32_t': 0x0A,
+    'uint64_t': 0x0B,
+    'int8_t': 0x00,
+    'int16_t': 0x01,
+    'int32_t': 0x02,
+    'int64_t': 0x03,
+    'FP16': 0x05,
+    'float': 0x06,
+    'double': 0x07
+}
+
 
 class CrazyflieServer(Node):
     def __init__(self):
@@ -65,30 +82,41 @@ class CrazyflieServer(Node):
         self._ros_parameters = self._param_to_dict(self._parameters)
 
         self.uris = []
-        self.cf_dict = {}
+        # for logging, assign a all -> all mapping
+        self.cf_dict = {
+            'all': 'all'
+        }
         self.uri_dict = {}
         self.type_dict = {}
-        
+
         # Assign default topic types, variables and callbacks
         self.default_log_type = {"pose": PoseStamped,
-                                "scan": LaserScan,
-                                "odom": Odometry}
+                                 "scan": LaserScan,
+                                 "odom": Odometry,
+                                 "status": Status}
         self.default_log_vars = {"pose": ['stateEstimate.x', 'stateEstimate.y', 'stateEstimate.z',
-                                         'stabilizer.roll', 'stabilizer.pitch', 'stabilizer.yaw'],
-                                "scan": ['range.front', 'range.left', 'range.back', 'range.right'],
-                                "odom": ['stateEstimate.x', 'stateEstimate.y', 'stateEstimate.z',
-                                         'stabilizer.yaw', 'stabilizer.roll', 'stabilizer.pitch',
-                                         'kalman.statePX', 'kalman.statePY', 'kalman.statePZ',
-                                         'gyro.z', 'gyro.x', 'gyro.y']}
+                                          'stabilizer.roll', 'stabilizer.pitch', 'stabilizer.yaw'],
+                                 "scan": ['range.front', 'range.left', 'range.back', 'range.right'],
+                                 "odom": ['stateEstimate.x', 'stateEstimate.y', 'stateEstimate.z',
+                                          'stabilizer.yaw', 'stabilizer.roll', 'stabilizer.pitch',
+                                          'kalman.statePX', 'kalman.statePY', 'kalman.statePZ',
+                                          'gyro.z', 'gyro.x', 'gyro.y'],
+                                 "status": ['supervisor.info', 'pm.vbatMV', 'pm.state',
+                                          'radio.rssi']}
         self.default_log_fnc = {"pose": self._log_pose_data_callback,
-                               "scan": self._log_scan_data_callback,
-                               "odom": self._log_odom_data_callback}
+                                "scan": self._log_scan_data_callback,
+                                "odom": self._log_odom_data_callback,
+                                "status": self._log_status_data_callback}
 
-        self.world_tf_name = "world"
+        world_tf_name = "world"
+        robot_yaml_version = 0
+
         try:
-            self.world_tf_name = self._ros_parameters["world_tf_name"]
+            robot_yaml_version = self._ros_parameters["fileversion"]
         except KeyError:
-            pass
+            self.get_logger().info("No fileversion found in crazyflies.yaml, assuming version 0")
+        
+        # Check if the Crazyflie library is initialized
         robot_data = self._ros_parameters["robots"]
 
         # Init a transform broadcaster
@@ -99,38 +127,53 @@ class CrazyflieServer(Node):
             if robot_data[crazyflie]["enabled"]:
                 type_cf = robot_data[crazyflie]["type"]
                 # do not include virtual objects
-                connection = self._ros_parameters['robot_types'][type_cf].get("connection", "crazyflie")
+                connection = self._ros_parameters['robot_types'][type_cf].get(
+                    "connection", "crazyflie")
                 if connection == "crazyflie":
                     uri = robot_data[crazyflie]["uri"]
                     self.uris.append(uri)
                     self.cf_dict[uri] = crazyflie
                     self.uri_dict[crazyflie] = uri
                     self.type_dict[uri] = type_cf
-        print(self.uris)
+
         # Setup Swarm class cflib with connection callbacks and open the links
         factory = CachedCfFactory(rw_cache="./cache")
         self.swarm = Swarm(self.uris, factory=factory)
         self.swarm.fully_connected_crazyflie_cnt = 0
+        self.swarm.connected_crazyflie_cnt = 0
+
+        # Check if parameter values needs to be uploaded and put on ROS 2 params
+        self.swarm.query_all_values_on_connect = self._ros_parameters["firmware_params"]["query_all_values_on_connect"]
 
         # Initialize logging, services and parameters for each crazyflie
         for link_uri in self.uris:
 
             # Connect callbacks for different connection states of the crazyflie
             self.swarm._cfs[link_uri].cf.fully_connected.add_callback(
-                self._fully_connected
-            )
+                self._fully_connected)
+            self.swarm._cfs[link_uri].cf.connected.add_callback(
+                self._connected)
             self.swarm._cfs[link_uri].cf.disconnected.add_callback(
                 self._disconnected)
             self.swarm._cfs[link_uri].cf.connection_failed.add_callback(
                 self._connection_failed
             )
 
+            # link statistics from CFlib
+            # self.swarm._cfs[link_uri].status = {}
+            # self.swarm._cfs[link_uri].status["latency"] = 0.0
+            # self.swarm._cfs[link_uri].cf.link_statistics.latency_updated.add_callback(partial(self._latency_callback, uri=link_uri))
+            # self.swarm._cfs[link_uri].status["num_rx_unicast"] = 0.0
+            # self.swarm._cfs[link_uri].cf.link_statistics.uplink_rate_updated.add_callback(partial(self._uplink_rate_callback, uri=link_uri))
+            # self.swarm._cfs[link_uri].status["num_tx_unicast"] = 0.0
+            # self.swarm._cfs[link_uri].cf.link_statistics.downlink_rate_updated.add_callback(partial(self._downlink_rate_callback, uri=link_uri))
+
+            # check if logging is enabled at startup
             self.swarm._cfs[link_uri].logging = {}
 
             cf_name = self.cf_dict[link_uri]
             cf_type = self.type_dict[link_uri]
 
-            # check if logging is enabled at startup
             logging_enabled = False
             try:
                 logging_enabled = self._ros_parameters['all']["firmware_logging"]["enabled"]
@@ -152,7 +195,8 @@ class CrazyflieServer(Node):
                 prefix = default_log_name
                 topic_type = self.default_log_type[default_log_name]
                 list_logvar = self.default_log_vars[default_log_name]
-                self._init_default_logblocks(prefix, link_uri, list_logvar, logging_enabled, topic_type)
+                self._init_default_logblocks(
+                    prefix, link_uri, list_logvar, logging_enabled, topic_type)
 
             # Check for any custom_log topics
             custom_logging_enabled = False
@@ -197,8 +241,26 @@ class CrazyflieServer(Node):
                     self.swarm._cfs[link_uri].logging["custom_log_groups"][log_group_name][
                         "frequency"] = custom_log_topics[log_group_name]["frequency"]
 
+            reference_frame = world_tf_name
+               # if larger then 3, then the reference frame is not set in the yaml file
+            if robot_yaml_version >= 3: 
+                try:
+                    reference_frame =self._ros_parameters['all']["reference_frame"]
+                except KeyError:
+                    pass
+                try:
+                    reference_frame =self._ros_parameters['robot_types'][robot_data[cf_name]['type']]["reference_frame"]
+                except KeyError:
+                    pass
+                try:
+                    reference_frame =self._ros_parameters['robots'][cf_name]["reference_frame"]
+                except KeyError:
+                    pass
+            self.swarm._cfs[link_uri].reference_frame = reference_frame
+
         # Now all crazyflies are initialized, open links!
         try:
+            self.time_open_link = self.get_clock().now().nanoseconds * 1e-9
             self.swarm.open_links()
         except Exception as e:
             # Close node if one of the Crazyflies can not be found
@@ -206,19 +268,32 @@ class CrazyflieServer(Node):
             self.get_logger().info("Check if you got the right URIs, if they are turned on" +
                                    " or if your script have proper access to a Crazyradio PA")
             exit()
-        
-        # Create services for the entire swarm and each individual crazyflie
-        self.create_service(Empty, "all/emergency", self._emergency_callback)
-        self.create_service(Takeoff, "all/takeoff", self._takeoff_callback)
-        self.create_service(Land, "all/land", self._land_callback)
-        self.create_service(GoTo, "all/go_to", self._go_to_callback)
-        self.create_service(StartTrajectory, "all/start_trajectory", self._start_trajectory_callback)
+    
+    def _init_topics_and_services(self):
 
+        # Create services for the entire swarm and each individual crazyflie
         for uri in self.cf_dict:
+            if uri == "all":
+                continue
+
             name = self.cf_dict[uri]
+
+            pub = self.create_publisher(String, name + '/robot_description',
+            rclpy.qos.QoSProfile(
+                depth=1,
+                durability=rclpy.qos.QoSDurabilityPolicy.TRANSIENT_LOCAL))
+
+            msg = String()
+            msg.data = self._ros_parameters['robot_description'].replace("$NAME", name)
+            pub.publish(msg)
+
             self.create_service(
                 Empty, name +
                 "/emergency", partial(self._emergency_callback, uri=uri)
+            )
+            self.create_service(
+                Arm, name +
+                "/arm", partial(self._arm_callback, uri=uri)
             )
             self.create_service(
                 Takeoff, name +
@@ -231,34 +306,57 @@ class CrazyflieServer(Node):
                 GoTo, name + "/go_to", partial(self._go_to_callback, uri=uri)
             )
             self.create_service(
-                StartTrajectory, name + "/start_trajectory", partial(self._start_trajectory_callback, uri=uri)
+                StartTrajectory, name +
+                "/start_trajectory", partial(
+                    self._start_trajectory_callback, uri=uri)
             )
             self.create_service(
-                UploadTrajectory, name + "/upload_trajectory", partial(self._upload_trajectory_callback, uri=uri) 
+                UploadTrajectory, name +
+                "/upload_trajectory", partial(
+                    self._upload_trajectory_callback, uri=uri)
             )
             self.create_service(
-                NotifySetpointsStop, name + "/notify_setpoints_stop", partial(self._notify_setpoints_stop_callback, uri=uri) 
-            )
-            self.create_subscription(
-                Twist, name +
-                "/cmd_vel_legacy", partial(self._cmd_vel_legacy_changed, uri=uri), 10
+                NotifySetpointsStop, name +
+                "/notify_setpoints_stop", partial(
+                    self._notify_setpoints_stop_callback, uri=uri)
             )
             self.create_subscription(
                 AttitudeSetpoint, name +
                 "/cmd_attitude_setpoint", partial(self._cmd_attitude_setpoint_changed, uri=uri), 10
             )
             self.create_subscription(
+                Position, name +
+                "/cmd_position", partial(self._cmd_position_changed, uri=uri), 10
+            )
+
+            self.create_subscription(
                 Hover, name +
                 "/cmd_hover", partial(self._cmd_hover_changed, uri=uri), 10
             )
-            qos_profile = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT,
+
+            self.create_subscription(
+                FullState, name +
+                "/cmd_full_state", partial(self._cmd_full_state_changed, uri=uri), 10
+            )
+            qos_profile = QoSProfile(reliability =QoSReliabilityPolicy.BEST_EFFORT,
                 history=QoSHistoryPolicy.KEEP_LAST,
                 depth=1,
                 deadline = Duration(seconds=0, nanoseconds=1e9/100.0))
+
             self.create_subscription(
-                NamedPoseArray, "/poses", 
+                NamedPoseArray, "/poses",
                 self._poses_changed, qos_profile
             )
+
+        self.create_service(Arm, "all/arm", self._arm_callback)
+        self.create_service(Takeoff, "all/takeoff", self._takeoff_callback)
+        self.create_service(Land, "all/land", self._land_callback)
+        self.create_service(GoTo, "all/go_to", self._go_to_callback)
+        self.create_service(
+            StartTrajectory, "all/start_trajectory", self._start_trajectory_callback)
+
+        # This is the last service to announce and can be used to check if the server is fully available
+        self.create_service(Empty, "all/emergency", self._emergency_callback)
 
     def _init_default_logblocks(self, prefix, link_uri, list_logvar, global_logging_enabled, topic_type):
         """
@@ -266,7 +364,7 @@ class CrazyflieServer(Node):
         """
         cf_name = self.cf_dict[link_uri]
         cf_type = self.type_dict[link_uri]
-        
+
         logging_enabled = False
         logging_freq = 10
         try:
@@ -296,8 +394,10 @@ class CrazyflieServer(Node):
             else:
                 lg.add_variable(logvar)
 
-        self.swarm._cfs[link_uri].logging[prefix + "_logging_enabled"] = logging_enabled
-        self.swarm._cfs[link_uri].logging[prefix + "_logging_freq"] = logging_freq
+        self.swarm._cfs[link_uri].logging[prefix +
+                                          "_logging_enabled"] = logging_enabled
+        self.swarm._cfs[link_uri].logging[prefix +
+                                          "_logging_freq"] = logging_freq
         self.swarm._cfs[link_uri].logging[prefix + "_log_config"] = lg
         if logging_enabled and global_logging_enabled:
             self.swarm._cfs[link_uri].logging[prefix + "_publisher"] = self.create_publisher(
@@ -319,28 +419,70 @@ class CrazyflieServer(Node):
                     t = t.setdefault(part, {})
         return tree
 
+    def _latency_callback(self, latency, uri=""):
+        """
+        Called when the latency of the Crazyflie is updated
+        """
+        self.swarm._cfs[uri].status["latency"] = latency
+
+    def _uplink_rate_callback(self, uplink_rate, uri=""):
+        """
+        Called when the uplink rate of the Crazyflie is updated
+        """
+        self.swarm._cfs[uri].status["num_rx_unicast"] = uplink_rate
+
+    def _downlink_rate_callback(self, downlink_rate, uri=""):
+        """
+        Called when the uplink rate of the Crazyflie is updated
+        """
+        self.swarm._cfs[uri].status["num_tx_unicast"] = downlink_rate
+
+    def _connected(self, link_uri):
+        """
+        Called when the toc of the parameters and
+         logs has been received of the Crazyflie
+        """
+        self.get_logger().info(f"[{self.cf_dict[link_uri]}] is connected!")
+        self.swarm.connected_crazyflie_cnt += 1
+
+        if self.swarm.connected_crazyflie_cnt == len(self.cf_dict) - 1:
+            self.time_all_crazyflie_connected = self.get_clock().now().nanoseconds * 1e-9
+            self.get_logger().info(f"All Crazyflies are connected! It took {self.time_all_crazyflie_connected - self.time_open_link} seconds")
+            self._init_topics_and_services()
+            self._init_logging()
+            if not self.swarm.query_all_values_on_connect:
+                self._init_parameters()
+                self.add_on_set_parameters_callback(self._parameters_callback)
+
+        else:
+            return
+
+
     def _fully_connected(self, link_uri):
         """
-        Called when all parameters have been updated
-          and the full log toc has been received of the Crazyflie
+        Called the full log toc and parameter +  values
+          has been received from the Crazyflie
         """
-        self.get_logger().info(f" {link_uri} is fully connected!")
+        self.get_logger().info(f"[{self.cf_dict[link_uri]}] is fully connected!")
 
         self.swarm.fully_connected_crazyflie_cnt += 1
 
-        if self.swarm.fully_connected_crazyflie_cnt == len(self.cf_dict):
-            self.get_logger().info("All Crazyflies are fully connected!")
-            self._init_parameters()
-            self._init_logging()
-            self.add_on_set_parameters_callback(self._parameters_callback)
+        # use len(self.cf_dict) - 1, since cf_dict contains "all" as well
+        if self.swarm.fully_connected_crazyflie_cnt == len(self.cf_dict) - 1:
+            self.time_all_crazyflie_connected = self.get_clock().now().nanoseconds * 1e-9
+            self.get_logger().info(f"All Crazyflies are fully connected! It took {self.time_all_crazyflie_connected - self.time_open_link} seconds")
+            if self.swarm.query_all_values_on_connect:
+                self._init_parameters()
+                self.add_on_set_parameters_callback(self._parameters_callback)
+
         else:
             return
 
     def _disconnected(self, link_uri):
-        self.get_logger().info(f" {link_uri} is disconnected!")
+        self.get_logger().info(f"[{self.cf_dict[link_uri]}] is disconnected!")
 
     def _connection_failed(self, link_uri, msg):
-        self.get_logger().info(f"{link_uri} connection Failed")
+        self.get_logger().info(f"[{self.cf_dict[link_uri]}] connection Failed")
         self.swarm.close_links()
 
     def _init_logging(self):
@@ -359,7 +501,7 @@ class CrazyflieServer(Node):
                 if cf_handle.logging[prefix + "_logging_enabled"] and cf_handle.logging["enabled"]:
                     callback_fnc = self.default_log_fnc[prefix]
                     self._init_default_logging(prefix, link_uri, callback_fnc)
-            
+
             # Start logging for costum logging blocks
             cf_handle.l_toc = cf.log.toc.toc
             if len(cf_handle.logging["custom_log_groups"]) != 0 and cf_handle.logging["enabled"]:
@@ -376,20 +518,20 @@ class CrazyflieServer(Node):
                             self._log_error_callback)
                         lg_custom.start()
                     except KeyError as e:
-                        self.get_logger().info(f'{link_uri}: Could not start log configuration,'
+                        self.get_logger().info(f'[{self.cf_dict[link_uri]}] Could not start log configuration,'
                                                '{} not found in TOC'.format(str(e)))
                     except AttributeError:
                         self.get_logger().info(
-                            f'{link_uri}: Could not add log config, bad configuration.')
+                            f'[{self.cf_dict[link_uri]}] Could not add log config, bad configuration.')
 
-                self.get_logger().info(f"{link_uri} setup custom logging")
+                self.get_logger().info(f"[{self.cf_dict[link_uri]}] setup custom logging")
 
             self.create_service(
                 RemoveLogging, self.cf_dict[link_uri] + "/remove_logging", partial(self._remove_logging, uri=link_uri))
             self.create_service(
                 AddLogging, self.cf_dict[link_uri] + "/add_logging", partial(self._add_logging, uri=link_uri))
 
-        self.get_logger().info("All Crazyflies loggging are initialized")
+        self.get_logger().info("All Crazyflies logging are initialized.")
 
     def _init_default_logging(self, prefix, link_uri, callback_fnc):
         """
@@ -408,17 +550,17 @@ class CrazyflieServer(Node):
             self.declare_parameter(
                 self.cf_dict[link_uri] + ".logs." + prefix + ".frequency.", frequency)
             self.get_logger().info(
-                f"{link_uri} setup logging for {prefix} at freq {frequency}")
+                f"[{self.cf_dict[link_uri]}] setup logging for {prefix} at freq {frequency}")
         except KeyError as e:
-            self.get_logger().info(f'{link_uri}: Could not start log configuration,'
-                                    '{} not found in TOC'.format(str(e)))
+            self.get_logger().error(f'[{self.cf_dict[link_uri]}] Could not start log configuration,'
+                                   '{} not found in TOC'.format(str(e)))
         except AttributeError:
-            self.get_logger().info(
-                f'{link_uri}: Could not add log config, bad configuration.')
-    
+            self.get_logger().error(
+                f'[{self.cf_dict[link_uri]}] Could not add log config, bad configuration.')
+
     def _log_scan_data_callback(self, timestamp, data, logconf, uri):
         """
-        Once multiranger range is retrieved from the Crazyflie, 
+        Once multiranger range is retrieved from the Crazyflie,
             send out the ROS 2 topic for Scan
         """
         cf_name = self.cf_dict[uri]
@@ -434,7 +576,7 @@ class CrazyflieServer(Node):
         if right_range > max_range:
             right_range = float("inf")
         if back_range > max_range:
-            back_range = float("inf")  
+            back_range = float("inf")
         self.ranges = [back_range, right_range, front_range, left_range]
 
         msg = LaserScan()
@@ -443,14 +585,18 @@ class CrazyflieServer(Node):
         msg.range_min = 0.01
         msg.range_max = 3.49
         msg.ranges = self.ranges
-        msg.angle_min = -0.5 * 2* pi
-        msg.angle_max =  0.25 * 2 * pi
+        msg.angle_min = -0.5 * 2 * pi
+        msg.angle_max = 0.25 * 2 * pi
         msg.angle_increment = 1.0 * pi/2
-        self.swarm._cfs[uri].logging["scan_publisher"].publish(msg)
+        try:
+            self.swarm._cfs[uri].logging["scan_publisher"].publish(msg)
+        except:
+            self.get_logger().info("Could not publish scan message, stopping scan log")
+            self.swarm._cfs[uri].logging["scan_log_config"].stop()
 
     def _log_pose_data_callback(self, timestamp, data, logconf, uri):
         """
-        Once pose data is retrieved from the Crazyflie, 
+        Once pose data is retrieved from the Crazyflie,
             send out the ROS 2 topic for Pose
         """
 
@@ -466,7 +612,7 @@ class CrazyflieServer(Node):
 
         msg = PoseStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = self.world_tf_name
+        msg.header.frame_id = self.swarm._cfs[uri].reference_frame
         msg.pose.position.x = x
         msg.pose.position.y = y
         msg.pose.position.z = z
@@ -474,11 +620,15 @@ class CrazyflieServer(Node):
         msg.pose.orientation.y = q[1]
         msg.pose.orientation.z = q[2]
         msg.pose.orientation.w = q[3]
-        self.swarm._cfs[uri].logging["pose_publisher"].publish(msg)
+        try:
+            self.swarm._cfs[uri].logging["pose_publisher"].publish(msg)
+        except:
+            self.get_logger().info("Could not publish pose message, stopping pose log")
+            self.swarm._cfs[uri].logging["pose_log_config"].stop()
 
         t_base = TransformStamped()
         t_base.header.stamp = self.get_clock().now().to_msg()
-        t_base.header.frame_id = self.world_tf_name
+        t_base.header.frame_id = self.swarm._cfs[uri].reference_frame
         t_base.child_frame_id = cf_name
         t_base.transform.translation.x = x
         t_base.transform.translation.y = y
@@ -487,11 +637,14 @@ class CrazyflieServer(Node):
         t_base.transform.rotation.y = q[1]
         t_base.transform.rotation.z = q[2]
         t_base.transform.rotation.w = q[3]
-        self.tfbr.sendTransform(t_base)
+        try:
+            self.tfbr.sendTransform(t_base)
+        except:
+            self.get_logger().info("Could not publish pose tf")
 
     def _log_odom_data_callback(self, timestamp, data, logconf, uri):
         """
-        Once pose and velocity data is retrieved from the Crazyflie, 
+        Once pose and velocity data is retrieved from the Crazyflie,
             send out the ROS 2 topic for Odometry in 2D (no z-axis)
         """
         cf_name = self.cf_dict[uri]
@@ -504,7 +657,7 @@ class CrazyflieServer(Node):
         pitch = radians(data.get('stabilizer.pitch'))
         vx = data.get('kalman.statePX')
         vy = data.get('kalman.statePY')
-        vz = data.get('kalman.statePY')
+        vz = data.get('kalman.statePZ')
         yawrate = data.get('gyro.z')
         rollrate = data.get('gyro.x')
         pitchrate = data.get('gyro.y')
@@ -513,7 +666,7 @@ class CrazyflieServer(Node):
         msg = Odometry()
         msg.child_frame_id = cf_name
         msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = self.world_tf_name
+        msg.header.frame_id = self.swarm._cfs[uri].reference_frame
         msg.pose.pose.position.x = x
         msg.pose.pose.position.y = y
         msg.pose.pose.position.z = z
@@ -528,24 +681,58 @@ class CrazyflieServer(Node):
         msg.twist.twist.angular.y = pitchrate
         msg.twist.twist.angular.x = rollrate
 
-        self.swarm._cfs[uri].logging["odom_publisher"].publish(msg)
+        try:
+            self.swarm._cfs[uri].logging["odom_publisher"].publish(msg)
+        except:
+            self.get_logger().info("Could not publish odom message, stopping odom log")
+            self.swarm._cfs[uri].logging["odom_log_config"].stop()
 
-        # t_base = TransformStamped()
-        # t_base.header.stamp = self.get_clock().now().to_msg()
-        # t_base.header.frame_id = 'odom'
-        # t_base.child_frame_id = cf_name
-        # t_base.transform.translation.x = x
-        # t_base.transform.translation.y = y
-        # t_base.transform.translation.z = z
-        # t_base.transform.rotation.x = q[0]
-        # t_base.transform.rotation.y = q[1]
-        # t_base.transform.rotation.z = q[2]
-        # t_base.transform.rotation.w = q[3]
-        # self.tfbr.sendTransform(t_base)
+        t_base = TransformStamped()
+        t_base.header.stamp = self.get_clock().now().to_msg()
+        t_base.header.frame_id = self.swarm._cfs[uri].reference_frame
+        t_base.child_frame_id = cf_name
+        t_base.transform.translation.x = x
+        t_base.transform.translation.y = y
+        t_base.transform.translation.z = z
+        t_base.transform.rotation.x = q[0]
+        t_base.transform.rotation.y = q[1]
+        t_base.transform.rotation.z = q[2]
+        t_base.transform.rotation.w = q[3]
+
+        try:
+            self.tfbr.sendTransform(t_base)
+        except:
+            self.get_logger().info("Could not publish odom tf")
+
+    def _log_status_data_callback(self, timestamp, data, logconf, uri):
+        """
+        Send out the ROS 2 status topic
+        """
+
+        msg = Status()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = self.swarm._cfs[uri].reference_frame
+
+        # From logging statistics
+        msg.supervisor_info = data.get('supervisor.info')
+        msg.battery_voltage = data.get('pm.vbatMV') / 1000.0
+        msg.pm_state = data.get('pm.state')
+        msg.rssi = data.get('radio.rssi')
+
+        # From link statistics class
+        msg.latency_unicast  = int(self.swarm._cfs[uri].status["latency"])
+        msg.num_rx_unicast = int(self.swarm._cfs[uri].status["num_rx_unicast"])
+        msg.num_tx_unicast = int(self.swarm._cfs[uri].status["num_tx_unicast"])
+
+        try:
+            self.swarm._cfs[uri].logging["status_publisher"].publish(msg)
+        except:
+            self.get_logger().info("Could not publish status message, stopping status log")
+            self.swarm._cfs[uri].logging["status_log_config"].stop()
 
     def _log_custom_data_callback(self, timestamp, data, logconf, uri):
         """
-        Once custom log block is retrieved from the Crazyflie, 
+        Once custom log block is retrieved from the Crazyflie,
             send out the ROS 2 topic for that same type of log
         """
         msg = LogDataGeneric()
@@ -554,18 +741,22 @@ class CrazyflieServer(Node):
         for log_name in data:
             msg.values.append(data.get(log_name))
 
-        self.swarm._cfs[uri].logging["custom_log_publisher"][logconf.name].publish(
+        try:
+            self.swarm._cfs[uri].logging["custom_log_publisher"][logconf.name].publish(
             msg)
+        except:
+            self.get_logger().info("Could not publish custom {logconf.name} message, stopping custom log")
+            self.swarm._cfs[uri].logging["custom_log_groups"][logconf.name]["log_config"].stop()
 
     def _log_error_callback(self, logconf, msg):
         print('Error when logging %s: %s' % (logconf.name, msg))
 
     def _init_parameters(self):
         """
-        Once custom log block is retrieved from the Crazyflie, 
+        Once custom log block is retrieved from the Crazyflie,
             send out the ROS 2 topic for that same type of log
         """
-        set_param_all = False
+        set_param_to_ROS = self.swarm.query_all_values_on_connect
         for link_uri in self.uris:
             cf = self.swarm._cfs[link_uri].cf
 
@@ -575,75 +766,79 @@ class CrazyflieServer(Node):
                 for param in sorted(p_toc[group].keys()):
                     name = group + "." + param
 
-                    # Check the parameter type 
+                    # Check the parameter type
                     elem = p_toc[group][param]
                     type_cf_param = elem.ctype
-                    parameter_descriptor = ParameterDescriptor(type=cf_log_to_ros_param[type_cf_param])
+                    parameter_descriptor = ParameterDescriptor(
+                        type=type_cf_param_to_ros_param[type_cf_param])
 
                     # Check ros parameters if an parameter should be set
                     #   Parameter sets for individual robots has priority,
                     #   then robot types, then all (all robots)
-                    set_param_value = None
+                    param_value = None
                     try:
-                        set_param_value = self._ros_parameters["all"]["firmware_params"][group][param]
+                        param_value = self._ros_parameters["all"]["firmware_params"][group][param]
                     except KeyError:
                         pass
                     try:
-                        set_param_value = self._ros_parameters["robot_types"][self.cf_dict[link_uri]]["firmware_params"][group][param]
+                        param_value = self._ros_parameters["robot_types"][self.cf_dict[link_uri]
+                                                                              ]["firmware_params"][group][param]
                     except KeyError:
                         pass
                     try:
-                        set_param_value = self._ros_parameters["robots"][self.cf_dict[link_uri]]["firmware_params"][group][param]
+                        param_value = self._ros_parameters["robots"][self.cf_dict[link_uri]
+                                                                         ]["firmware_params"][group][param]
                     except KeyError:
                         pass
 
-                    if set_param_value is not None:
+                    if param_value is not None:
                         # If value is found in initial parameters,
                         # set crazyflie firmware value and declare value in ROS 2 parameter
                         # Note: currently this is not possible to get the most recent from the
                         #       crazyflie with get_value due to threading.
-                        cf.param.set_value(name, set_param_value)
+                        cf.param.set_value_raw(name, type_cf_param_to_index[type_cf_param], param_value)
                         self.get_logger().info(
-                            f" {link_uri}: {name} is set to {set_param_value}"
+                            f"[{self.cf_dict[link_uri]}] {name} is set to {param_value}"
                         )
-                        self.declare_parameter(
-                            self.cf_dict[link_uri] +
-                            ".params." + group + "." + param,
-                            value=set_param_value,
-                            descriptor=parameter_descriptor,
-                        )
+                        if set_param_to_ROS:
+                            self.declare_parameter(
+                                self.cf_dict[link_uri] +
+                                ".params." + group + "." + param,
+                                value=param_value,
+                                descriptor=parameter_descriptor,
+                            )
 
                     else:
                         # If value is not found in initial parameter set
                         # get crazyflie paramter value and declare that value in ROS 2 parameter
+                        # Only do this if this has been indicated by the user
+                        if set_param_to_ROS is True:
 
-                        if cf_log_to_ros_param[type_cf_param] is ParameterType.PARAMETER_INTEGER:
-                            cf_param_value = int(cf.param.get_value(name))
-                        elif cf_log_to_ros_param[type_cf_param] is ParameterType.PARAMETER_DOUBLE:
-                            cf_param_value = float(cf.param.get_value(name))
+                            if type_cf_param_to_ros_param[type_cf_param] is ParameterType.PARAMETER_INTEGER:
+                                cf_param_value = int(cf.param.get_value(name))
+                            elif type_cf_param_to_ros_param[type_cf_param] is ParameterType.PARAMETER_DOUBLE:
+                                cf_param_value = float(cf.param.get_value(name))
 
-                        self.declare_parameter(
-                            self.cf_dict[link_uri] +
-                            ".params." + group + "." + param,
-                            value=cf_param_value,
-                            descriptor=parameter_descriptor,
-                        )
-                    # Use set_param_all to set a parameter based on the toc of the first crazyflie
-                    if cf_log_to_ros_param[type_cf_param] is ParameterType.PARAMETER_INTEGER:
-                        cf_param_value = int(cf.param.get_value(name))
-                    elif cf_log_to_ros_param[type_cf_param] is ParameterType.PARAMETER_DOUBLE:
-                        cf_param_value = float(cf.param.get_value(name))
-                    if set_param_all is False:
-                        self.declare_parameter(
-                            "all.params." + group + "." + param,
-                            value=cf_param_value,
-                            descriptor=parameter_descriptor,
-                        )
+                            self.declare_parameter(
+                                self.cf_dict[link_uri] +
+                                ".params." + group + "." + param,
+                                value=cf_param_value,
+                                descriptor=parameter_descriptor,
+                                )
+                            # Based on the parameters from the last Crazyflie, set params for all
+                            # Warning: if any of the other crazyflies have different parameters
+                            #                this will result in an error
+                            try:
+                                self.declare_parameter(
+                                    "all.params." + group + "." + param,
+                                    value=cf_param_value,
+                                    descriptor=parameter_descriptor,
+                                    )
+                            except Exception as e:
+                                continue
 
-            # Now all parameters are set        
-            set_param_all = True
 
-        self.get_logger().info("All Crazyflies parameters are initialized")
+        self.get_logger().info("All Crazyflies parameters are initialized.")
 
     def _parameters_callback(self, params):
         """
@@ -653,7 +848,22 @@ class CrazyflieServer(Node):
         for param in params:
             param_split = param.name.split(".")
 
-            if param_split[0] in self.cf_dict.values():
+            if param_split[0] == "all":
+                if param_split[1] == "params":
+                    name_param = param_split[2] + "." + param_split[3]
+                    try:
+                        for link_uri in self.uris:
+                            cf = self.swarm._cfs[link_uri].cf.param.set_value(
+                                name_param, param.value
+                            )
+                        self.get_logger().info(
+                            f"[{self.cf_dict[link_uri]}] {name_param} is set to {param.value}"
+                        )
+                        return SetParametersResult(successful=True)
+                    except Exception as e:
+                        self.get_logger().info(str(e))
+                        return SetParametersResult(successful=False)
+            elif param_split[0] in self.cf_dict.values():
                 cf_name = param_split[0]
                 if param_split[1] == "params":
                     name_param = param_split[2] + "." + param_split[3]
@@ -662,7 +872,7 @@ class CrazyflieServer(Node):
                             name_param, param.value
                         )
                         self.get_logger().info(
-                            f" {self.uri_dict[cf_name]}: {name_param} is set to {param.value}"
+                            f"[{self.uri_dict[cf_name]}] {name_param} is set to {param.value}"
                         )
                         return SetParametersResult(successful=True)
                     except Exception as e:
@@ -670,24 +880,10 @@ class CrazyflieServer(Node):
                         return SetParametersResult(successful=False)
                 if param_split[1] == "logs":
                     return SetParametersResult(successful=True)
-            elif param_split[0] == "all":
-                if param_split[1] == "params":
-                    name_param = param_split[2] + "." + param_split[3]
-                    try:
-                        for link_uri in self.uris:
-                            cf = self.swarm._cfs[link_uri].cf.param.set_value(
-                            name_param, param.value
-                        )
-                        self.get_logger().info(
-                            f" {link_uri}: {name_param} is set to {param.value}"
-                        )
-                        return SetParametersResult(successful=True)
-                    except Exception as e:
-                        self.get_logger().info(str(e))
-                        return SetParametersResult(successful=False)
-                    
+
+
         return SetParametersResult(successful=False)
-    
+
     def _emergency_callback(self, request, response, uri="all"):
         if uri == "all":
             for link_uri in self.uris:
@@ -697,18 +893,41 @@ class CrazyflieServer(Node):
 
         return response
 
+    def _arm_callback(self, request, response, uri="all"):
+        """
+        Service callback to arm or disarm the Crazyflie
+        """
+
+        arm_bool = request.arm
+
+        self.get_logger().info(
+            f"[{self.cf_dict[uri]}] Arm request is {arm_bool} "
+        )
+        if uri == "all":
+            for link_uri in self.uris:
+                self.swarm._cfs[link_uri].cf.platform.send_arming_request(
+                    arm_bool
+                )
+        else:
+            self.swarm._cfs[uri].cf.platform.send_arming_request(
+                    arm_bool
+                )
+
+        return response
+
     def _takeoff_callback(self, request, response, uri="all"):
         """
-        Service callback to take the crazyflie land to 
+        Service callback to take the crazyflie land to
             a certain height in high level commander
         """
+
 
         duration = float(request.duration.sec) + \
             float(request.duration.nanosec / 1e9)
         self.get_logger().info(
-            f"takeoff(height={request.height} m,"
+            f"[{self.cf_dict[uri]}] takeoff(height={request.height} m,"
             + f"duration={duration} s,"
-            + f"group_mask={request.group_mask}) {uri}"
+            + f"group_mask={request.group_mask})"
         )
         if uri == "all":
             for link_uri in self.uris:
@@ -724,13 +943,13 @@ class CrazyflieServer(Node):
 
     def _land_callback(self, request, response, uri="all"):
         """
-        Service callback to make the crazyflie land to 
+        Service callback to make the crazyflie land to
             a certain height in high level commander
         """
         duration = float(request.duration.sec) + \
             float(request.duration.nanosec / 1e9)
         self.get_logger().info(
-            f"land(height={request.height} m,"
+            f"[{self.cf_dict[uri]}] land(height={request.height} m,"
             + f"duration={duration} s,"
             + f"group_mask={request.group_mask})"
         )
@@ -748,15 +967,16 @@ class CrazyflieServer(Node):
 
     def _go_to_callback(self, request, response, uri="all"):
         """
-        Service callback to have the crazyflie go to 
+        Service callback to have the crazyflie go to
             a certain position in high level commander
         """
         duration = float(request.duration.sec) + \
             float(request.duration.nanosec / 1e9)
 
         self.get_logger().info(
-            "go_to(position=%f,%f,%f m, yaw=%f rad, duration=%f s, relative=%d, group_mask=%d)"
+            "[%s] go_to(position=%f,%f,%f m, yaw=%f rad, duration=%f s, relative=%d, group_mask=%d)"
             % (
+                self.cf_dict[uri],
                 request.goal.x,
                 request.goal.y,
                 request.goal.z,
@@ -790,10 +1010,19 @@ class CrazyflieServer(Node):
         return response
 
     def _notify_setpoints_stop_callback(self, request, response, uri="all"):
-        self.get_logger().info("Notify setpoint stop not yet implemented")
+
+        self.get_logger().info(f"[{self.cf_dict[uri]}] Received notify setpoint stop")
+
+        if uri == "all":
+            for link_uri in self.uris:
+                self.swarm._cfs[link_uri].cf.commander.send_notify_setpoint_stop()
+        else:
+            self.swarm._cfs[uri].cf.commander.send_notify_setpoint_stop()
+
         return response
 
     def _upload_trajectory_callback(self, request, response, uri="all"):
+
         id = request.trajectory_id
         offset = request.piece_offset
         lenght = len(request.pieces)
@@ -804,7 +1033,7 @@ class CrazyflieServer(Node):
             offset,
             lenght,
         ))
- 
+
         trajectory = []
         for i in range(lenght):
             piece = request.pieces[i]
@@ -816,7 +1045,7 @@ class CrazyflieServer(Node):
                 float(piece.duration.nanosec)/1e9
             trajectory.append(Poly4D(duration, px, py, pz, pyaw))
             total_duration = total_duration + duration
- 
+
         if uri == "all":
             upload_success_all = True
             for link_uri in self.uris:
@@ -844,18 +1073,19 @@ class CrazyflieServer(Node):
                 return response
             self.swarm._cfs[uri].cf.high_level_commander.define_trajectory(
                 id, offset, len(trajectory))
- 
+
         return response
- 
+
     def _start_trajectory_callback(self, request, response, uri="all"):
+
         id = request.trajectory_id
         ts = request.timescale
         rel = request.relative
         rev = request.reversed
         gm = request.group_mask
- 
+
         self.get_logger().info("[%s] start_trajectory(id=%d,timescale=%f,relative=%d, reversed=%d, group_mask=%d)" % (
-            uri,
+            self.cf_dict[uri],
             id,
             ts,
             rel,
@@ -869,14 +1099,14 @@ class CrazyflieServer(Node):
         else:
             self.swarm._cfs[uri].cf.high_level_commander.start_trajectory(
                 id, ts, rel, rev, gm)
- 
+
         return response
-    
+
     def _poses_changed(self, msg):
         """
         Topic update callback to the motion capture lib's
            poses topic to send through the external position
-           to the crazyflie 
+           to the crazyflie
         """
 
         poses = msg.poses
@@ -889,7 +1119,7 @@ class CrazyflieServer(Node):
 
             if name in self.uri_dict.keys():
                 uri = self.uri_dict[name]
-                #self.get_logger().info(f"{uri}: send extpos {x}, {y}, {z} to {name}")
+                # self.get_logger().info(f"{uri}: send extpos {x}, {y}, {z} to {name}")
                 if isnan(quat.x):
                     self.swarm._cfs[uri].cf.extpos.send_extpos(
                         x, y, z)
@@ -897,23 +1127,22 @@ class CrazyflieServer(Node):
                     self.swarm._cfs[uri].cf.extpos.send_extpose(
                         x, y, z, quat.x, quat.y, quat.z, quat.w)
 
-
-    def _cmd_vel_legacy_changed(self, msg, uri=""):
-        """
-        Topic update callback to control the attitude and thrust
-            of the crazyflie with teleop
-        """
-        roll = msg.linear.y
-        pitch = -msg.linear.x
-        yawrate = msg.angular.z
-        thrust = int(min(max(msg.linear.z, 0, 0), 60000))
-        self.swarm._cfs[uri].cf.commander.send_setpoint(
-            roll, pitch, yawrate, thrust)
-
     def _cmd_attitude_setpoint_changed(self, msg, uri=""):
         self.swarm._cfs[uri].cf.commander.send_setpoint(
                     msg.roll, msg.pitch, msg.yaw_rate, msg.thrust)
-        
+
+    def _cmd_position_changed(self, msg, uri=""):
+        """
+        Topic update callback to control the position command
+            of the crazyflie 
+        """
+        x = msg.x
+        y = msg.y
+        z = msg.z
+        yaw = msg.yaw
+        self.swarm._cfs[uri].cf.commander.send_position_setpoint(
+            x, y, z, yaw)
+
     def _cmd_hover_changed(self, msg, uri=""):
         """
         Topic update callback to control the hover command
@@ -923,8 +1152,21 @@ class CrazyflieServer(Node):
         vy = msg.vy
         z = msg.z_distance
         yawrate = -1.0*degrees(msg.yaw_rate)
-        self.swarm._cfs[uri].cf.commander.send_hover_setpoint(vx, vy, yawrate, z)
-        self.get_logger().info(f"{uri}: Received hover topic {vx} {vy} {yawrate} {z}")
+        self.swarm._cfs[uri].cf.commander.send_hover_setpoint(
+            vx, vy, yawrate, z)
+
+    def _cmd_full_state_changed(self, msg, uri=""):
+        """
+        Topic update callback to full state cmd topic
+        """
+        pos = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
+        vel = [msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z]
+        acc = [msg.acc.x, msg.acc.y, msg.acc.z]
+        q = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
+        roll_rate = msg.twist.angular.x
+        pitch_rate =  msg.twist.angular.y
+        yaw_rate = msg.twist.angular.z
+        self.swarm._cfs[uri].cf.commander.send_full_state_setpoint(pos, vel, acc, q, roll_rate, pitch_rate, yaw_rate)
 
     def _remove_logging(self, request, response, uri="all"):
         """
@@ -938,10 +1180,10 @@ class CrazyflieServer(Node):
                 self.swarm._cfs[uri].logging[topic_name + "_log_config"].stop()
                 self.destroy_publisher(
                     self.swarm._cfs[uri].logging[topic_name + "_publisher"])
-                self.get_logger().info(f"{uri}: Remove {topic_name} logging")
+                self.get_logger().info(f"[{self.cf_dict[uri]}] Remove {topic_name} logging")
             except rclpy.exceptions.ParameterNotDeclaredException:
                 self.get_logger().info(
-                    f"{uri}: No logblock of {topic_name} has been found ")
+                    f"[{self.cf_dict[uri]}] No logblock of {topic_name} has been found ")
                 response.success = False
                 return response
         else:
@@ -951,10 +1193,10 @@ class CrazyflieServer(Node):
                 for log_name in self.swarm._cfs[uri].logging["custom_log_groups"][topic_name]["vars"]:
                     self.destroy_publisher(
                         self.swarm._cfs[uri].logging["custom_log_publisher"][topic_name])
-                self.get_logger().info(f"{uri}: Remove {topic_name} logging")
+                self.get_logger().info(f"[{self.cf_dict[uri]}] Remove {topic_name} logging")
             except rclpy.exceptions.ParameterNotDeclaredException:
                 self.get_logger().info(
-                    f"{uri}: No logblock of {topic_name} has been found ")
+                    f"[{self.cf_dict[uri]}] No logblock of {topic_name} has been found ")
                 response.success = False
                 return response
 
@@ -974,12 +1216,14 @@ class CrazyflieServer(Node):
                     self.cf_dict[uri] + ".logs." + topic_name + ".frequency.", frequency)
                 self.swarm._cfs[uri].logging[topic_name + "_publisher"] = self.create_publisher(
                     self.default_log_type[topic_name], self.cf_dict[uri] + "/" + topic_name, 10)
-                self.swarm._cfs[uri].logging[topic_name + "_log_config"].period_in_ms = 1000 / frequency
-                self.swarm._cfs[uri].logging[topic_name + "_log_config"].start()
-                self.get_logger().info(f"{uri}: Add {topic_name} logging")
+                self.swarm._cfs[uri].logging[topic_name +
+                                             "_log_config"].period_in_ms = 1000 / frequency
+                self.swarm._cfs[uri].logging[topic_name +
+                                             "_log_config"].start()
+                self.get_logger().info(f"[{self.cf_dict[uri]}] Add {topic_name} logging")
             except rclpy.exceptions.ParameterAlreadyDeclaredException:
                 self.get_logger().info(
-                    f"{uri}: The content the logging of {topic_name} has already started ")
+                    f"[{self.cf_dict[uri]}] The content the logging of {topic_name} has already started ")
                 response.success = False
                 return response
         else:
@@ -994,7 +1238,7 @@ class CrazyflieServer(Node):
                     lg_custom.add_variable(log_name)
                 self.swarm._cfs[uri].logging["custom_log_publisher"][topic_name] = self.create_publisher(
                     LogDataGeneric, self.cf_dict[uri] + "/" + topic_name, 10)
-                
+
                 self.swarm._cfs[uri].cf.log.add_config(lg_custom)
 
                 lg_custom.data_received_cb.add_callback(
@@ -1007,24 +1251,26 @@ class CrazyflieServer(Node):
                 self.swarm._cfs[uri].logging["custom_log_groups"][topic_name]["vars"] = variables
                 self.swarm._cfs[uri].logging["custom_log_groups"][topic_name]["frequency"] = frequency
 
-                self.get_logger().info(f"{uri}: Add {topic_name} logging")
+                self.get_logger().info(f"[{self.cf_dict[uri]}] Add {topic_name} logging")
             except KeyError as e:
-                self.get_logger().info(
-                    f"{uri}: Failed to add {topic_name} logging")
-                self.get_logger().info(str(e) + "is not in TOC")
-                self.undeclare_parameter(self.cf_dict[uri] + ".logs." + topic_name + ".frequency.")
-                self.undeclare_parameter(self.cf_dict[uri] + ".logs." + topic_name + ".vars.")
+                self.get_logger().error(
+                    f"[{self.cf_dict[uri]}] Failed to add {topic_name} logging")
+                self.get_logger().error(str(e) + "is not in TOC")
+                self.undeclare_parameter(
+                    self.cf_dict[uri] + ".logs." + topic_name + ".frequency.")
+                self.undeclare_parameter(
+                    self.cf_dict[uri] + ".logs." + topic_name + ".vars.")
                 response.success = False
                 return response
             except rclpy.exceptions.ParameterAlreadyDeclaredException:
-                self.get_logger().info(
-                    f"{uri}: The content or part of the logging of {topic_name} has already started ")
+                self.get_logger().error(
+                    f"[{self.cf_dict[uri]}] The content or part of the logging of {topic_name} has already started ")
                 response.success = False
                 return response
 
         response.success = True
         return response
-        
+
 
 def main(args=None):
 

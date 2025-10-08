@@ -1,15 +1,14 @@
 # Ubuntu 22.04
 FROM ubuntu:jammy
 
-ENV LANG C.UTF-8
-ENV LC_AL C.UTF-8
-ENV ROS2_DISTRO humble
-ENV GZ_RELEASE garden
+ENV LANG=C.UTF-8
+ENV LC_AL=C.UTF-8
+ENV ROS2_DISTRO=humble
+ENV GZ_RELEASE=garden
 ARG DEBIAN_FRONTEND=noninteractive
-ENV NVIDIA_VISIBLE_DEVICES all
-ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=graphics,utility,compute
 ENV TZ=Europe/Zagreb
-ARG INSTALL_BRIDGE=false
 ARG HOME=/root
 
 
@@ -109,8 +108,8 @@ RUN mkdir -p -m 0600 ~/.ssh/ && ssh-keyscan github.com >> ~/.ssh/known_hosts
 
 # install ROS2 humble
 RUN apt update && sudo apt install locales \
-  &&  locale-gen en_US en_US.UTF-8 \
-  &&  update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
+  && locale-gen en_US en_US.UTF-8 \
+  && update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 \
   && export LANG=en_US.UTF-8
 
 # set up ros2 repo
@@ -134,7 +133,7 @@ RUN  apt-get update \
 RUN apt-get install python-is-python3
 
 #Add mcap to bag things in ROS2
-RUN VERSION="releases/mcap-cli/v0.0.50" && \
+RUN VERSION="releases/mcap-cli/v0.0.55" && \
     RELEASE_URL=$(curl -s https://api.github.com/repos/foxglove/mcap/releases | jq -r --arg VERSION "$VERSION" '.[] | select(.tag_name == $VERSION) | .assets[0].browser_download_url') && \
     echo "Downloading release $VERSION from: $RELEASE_URL" && \
     curl -L -o /bin/mcap "$RELEASE_URL" && \
@@ -142,12 +141,9 @@ RUN VERSION="releases/mcap-cli/v0.0.50" && \
 
 #installing CrazySim
 WORKDIR $HOME
-RUN git clone https://github.com/gtfactslab/CrazySim.git --recursive\
-    && cd CrazySim \
-    && git checkout 8215637e4e2099fb74276c5ecf090e5729aa6c8c \
-    && git submodule update --init --recursive \
-    && cd crazyflie-lib-python \
-    && pip install -e .
+RUN  git clone https://github.com/gtfactslab/CrazySim.git --recursive \
+    && cd $HOME/CrazySim/crazyflie-lib-python \
+    &&  pip install -e .
 
 RUN pip install Jinja2
 RUN cd $HOME/CrazySim/crazyflie-firmware \
@@ -157,19 +153,33 @@ RUN cd $HOME/CrazySim/crazyflie-firmware \
 
     
 #install other ROS2 ws packages
-WORKDIR $HOME/CrazySim/ros2_ws/src
-RUN git clone https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco.git 
-RUN --mount=type=ssh git clone git@github.com:larics/icuas26_competition.git
-RUN --mount=type=ssh git clone git@github.com:larics/icuas25_msgs.git
+RUN mkdir -p $HOME/ros2_ws/src \
+  && cd $HOME/ros2_ws/src \
+  && git clone https://github.com/IMRCLab/crazyswarm2 --recursive
 
-WORKDIR $HOME/CrazySim/ros2_ws/src/crazyflie/scripts
-RUN rm $HOME/CrazySim/ros2_ws/src/crazyswarm2/crazyflie/scripts/crazyflie_server.py
-COPY to_copy/crazyflie_server.py $HOME/CrazySim/ros2_ws/src/crazyswarm2/crazyflie/scripts/
-RUN chmod +x $HOME/CrazySim/ros2_ws/src/crazyswarm2/crazyflie/scripts/crazyflie_server.py
+#Adapting crazyflies.yaml for simulation
+RUN rm $HOME/ros2_ws/src/crazyswarm2/crazyflie/config/crazyflies.yaml
+COPY to_copy/crazyflies.yaml $HOME/ros2_ws/src/crazyswarm2/crazyflie/config/
+
+WORKDIR $HOME/ros2_ws/src
+RUN git clone https://github.com/JMU-ROBOTICS-VIVA/ros2_aruco.git 
+RUN git clone https://github.com/larics/icuas26_competition.git
+RUN git clone https://github.com/larics/icuas25_msgs.git
+RUN git clone --recurse-submodules https://github.com/IMRCLab/motion_capture_tracking.git
+
+WORKDIR $HOME/ros2_ws/src/crazyswarm2/crazyflie/scripts
+RUN rm $HOME/ros2_ws/src/crazyswarm2/crazyflie/scripts/crazyflie_server.py
+COPY to_copy/crazyflie_server.py $HOME/ros2_ws/src/crazyswarm2/crazyflie/scripts/
+RUN chmod +x $HOME/ros2_ws/src/crazyswarm2/crazyflie/scripts/crazyflie_server.py
+RUN rm $HOME/ros2_ws/src/crazyswarm2/crazyflie_interfaces/CMakeLists.txt
+COPY to_copy/CMakeLists.txt $HOME/ros2_ws/src/crazyswarm2/crazyflie_interfaces/
+COPY to_copy/AttitudeSetpoint.msg $HOME/ros2_ws/src/crazyswarm2/crazyflie_interfaces/msg/
+
+
 
 WORKDIR $HOME
 # Add alias for sourcing for ros2 and ros2 workspace
-RUN echo "alias ros2_ws='source $HOME/CrazySim/ros2_ws/install/setup.bash'" >> $HOME/.bashrc
+RUN echo "alias ros2_ws='source $HOME/ros2_ws/install/setup.bash'" >> $HOME/.bashrc
 RUN echo "alias source_ros2='source /opt/ros/${ROS2_DISTRO}/setup.bash'" >> $HOME/.bashrc
 
 
@@ -179,7 +189,7 @@ COPY to_copy/models $HOME/CrazySim/crazyflie-firmware/tools/crazyflie-simulation
 RUN echo "export PATH='$HOME/.local/bin:$PATH'" >> $HOME/.bashrc
 
 # Add useful aliases
-RUN echo "alias cd_icuas26_competition='cd /root/CrazySim/ros2_ws/src/icuas26_competition'" >> $HOME/.bashrc
+RUN echo "alias cd_icuas26_competition='cd /root/ros2_ws/src/icuas26_competition'" >> $HOME/.bashrc
 
 
 RUN apt install libboost-program-options-dev libusb-1.0-0-dev
@@ -198,18 +208,16 @@ RUN apt-get update &&  apt-get upgrade -y && apt-get install -y \
                    ros-${ROS2_DISTRO}-octomap-msgs
 RUN apt install -y ros-${ROS2_DISTRO}-ros-gz${GZ_RELEASE}
 
-RUN echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/acados/lib" >> $HOME/.bashrc
-
 
 # setup ros2 environment variables
 RUN echo "export ROS_LOCALHOST_ONLY=1" >> $HOME/.bashrc
 RUN echo "export ROS_DOMAIN_ID=$(shuf -i 1-101 -n 1)" >> $HOME/.bashrc
 
 
-WORKDIR $HOME/CrazySim/ros2_ws
+WORKDIR $HOME/ros2_ws
 
 # Final build of ROS2 ws 
-RUN bash -c "source /opt/ros/${ROS2_DISTRO}/setup.bash;source $HOME/CrazySim/ros2_ws/install/setup.bash;colcon build --symlink-install --merge-install --cmake-args=-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+RUN bash -c "source /opt/ros/${ROS2_DISTRO}/setup.bash;source $HOME/ros2_ws/install/setup.bash;colcon build --symlink-install --merge-install"
 RUN echo "ros2_ws" >> $HOME/.bashrc && \
     echo "source_ros2" >> $HOME/.bashrc
 
