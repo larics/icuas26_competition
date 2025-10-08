@@ -10,22 +10,45 @@ def generate_launch_description():
     
     # load crazyflies
     crazyflies_yaml = os.path.join(
-        get_package_share_directory('icuas25_competition'),
+        get_package_share_directory('icuas26_competition'),
         'config',
         'crazyflies_mrs.yaml')
 
     with open(crazyflies_yaml, 'r') as ymlfile:
         crazyflies = yaml.safe_load(ymlfile)
+    
+    fileversion = 1
+    if "fileversion" in crazyflies:
+        fileversion = crazyflies["fileversion"]
 
-    server_params = crazyflies
+    # server params
+    server_yaml = os.path.join(
+        get_package_share_directory('crazyflie'),
+        'config',
+        'server.yaml')
+
+    with open(server_yaml, 'r') as ymlfile:
+        server_yaml_content = yaml.safe_load(ymlfile)
+
+    server_params = [crazyflies] + [server_yaml_content['/crazyflie_server']['ros__parameters']]
+    # robot description
+    urdf = os.path.join(
+        get_package_share_directory('crazyflie'),
+        'urdf',
+        'crazyflie_description.urdf')
+    
+    with open(urdf, 'r') as f:
+        robot_desc = f.read()
+
+    server_params[1]['robot_description'] = robot_desc
     
     gz_bridge_yaml = os.path.join(
-        get_package_share_directory('icuas25_competition'),
+        get_package_share_directory('icuas26_competition'),
         'config',
         'gz_bridge.yaml')
     
     charge_yaml = os.path.join(
-        get_package_share_directory('icuas25_competition'),
+        get_package_share_directory('icuas26_competition'),
         'config',
         'charging.yaml')
 
@@ -36,12 +59,12 @@ def generate_launch_description():
             executable='crazyflie_server.py',
             name='crazyflie_server',
             output='screen',
-            parameters=[server_params]
+            parameters=server_params
         ))
     
     # launch_description.append(
     #     Node(
-    #        package='icuas25_competition',
+    #        package='icuas26_competition',
     #        executable='TransformWorld2Odom.py',
     #        name='TransformWorld2Odom',
     #        output='screen'
@@ -50,7 +73,7 @@ def generate_launch_description():
     num_bots = int(os.environ.get('NUM_ROBOTS', '4'))
     launch_description.append(
         Node(
-           package='icuas25_competition',
+           package='icuas26_competition',
            executable='charging.py',
            name='Charge',
            output='screen',
@@ -93,7 +116,7 @@ def generate_launch_description():
             namespace='',
             executable='rviz2',
             name='rviz2',
-            arguments=['-d' + os.path.join(get_package_share_directory('icuas25_competition'), 'config', 'config.rviz')],
+            arguments=['-d' + os.path.join(get_package_share_directory('icuas26_competition'), 'config', 'config.rviz')],
             parameters=[{
                 "use_sim_time": True,
             }]

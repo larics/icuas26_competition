@@ -7,10 +7,10 @@ windows:
   - crazyflies_start:
       layout: tiled
       panes:
-        - bash /root/CrazySim/ros2_ws/src/icuas25_competition/launch/sitl_multiagent_text.sh -m crazyflie -f $SPAWN_POSE_DOC -w $ENV_NAME -n $NUM_ROBOTS
-        - waitForCfGazebo;sleep 8;bash ./generate_gazebo_bridge_yaml.sh $NUM_ROBOTS; ros2 launch icuas25_competition cf_velmux_launch.py
-        - waitForCfGazebo;sleep 10;ros2 launch icuas25_competition aruco_recognition.launch.py
-        - waitForCfGazebo;sleep 10;ros2 launch icuas25_competition octomap_server.launch.py
+        - bash /root/ros2_ws/src/icuas26_competition/launch/sitl_multiagent_text.sh -m crazyflie -f $SPAWN_POSE_DOC -w $ENV_NAME -n $NUM_ROBOTS
+        - waitForCfsGazebo;sleep 1;bash ./generate_gazebo_bridge_yaml.sh $NUM_ROBOTS; ros2 launch icuas26_competition cf_velmux_launch.py
+        - waitForCfsGazebo;sleep 3;ros2 launch icuas26_competition aruco_recognition.launch.py
+        - waitForCfsGazebo;sleep 6;ros2 launch icuas26_competition octomap_server.launch.py
   - topic_pane:
       layout: tiled
       panes:

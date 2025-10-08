@@ -14,7 +14,7 @@ def generate_launch_description():
     else:
         world_name = "_".join(environment_name.split("_")[:-1])
         bt_file = os.path.join(
-        get_package_share_directory('icuas25_competition'),
+        get_package_share_directory('icuas26_competition'),
         'worlds', world_name, 'meshes', world_name+'.binvox.bt')
 
         launch_description.append(
