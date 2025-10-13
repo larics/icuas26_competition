@@ -108,6 +108,9 @@ Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_compe
 
 If you are working in the group and you are all using the same network, please check [ROS_DOMAIN_ID](https://docs.ros.org/en/eloquent/Tutorials/Configuring-ROS2-Environment.html#the-ros-domain-id-variable) in `.bashrc` in the container. Random number should be set during the build, however it is possible that some of you got the same number. If that is the situation please change it, so that your simulations do not crash.
 
+## AGV
+The ground vehicle is not shown in the gazebo, however its position is being published on ` AGV/pose `. AGV's pose can be visualized in RVIZ with a marker and subscribing to the topic ` AGV/pose_marker `, which will show small sphere moving around. You can set up its velocity as an environment variable `AGV_VEL` and you can change its traveling path by setting config file with points and the environment variable ` AGV_PATH `. You can see the example in config/AGV_path_empty.yaml
+
 ## Creating and working with Octomaps
 If you install `octomap_ros` package, and all its derivatives for ROS, you will be good to go to attempt to convert 3D models into octomaps. We have included a binary that converts an `.stl` file into a `.binvox` file. It is located in `scripts` folder and is called `binvox`. You can use it as follows:
 ```bash

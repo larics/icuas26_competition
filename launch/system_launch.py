@@ -83,8 +83,31 @@ def generate_launch_description():
                 {"min_height": 0.07}
             ]
        ))
+    
+    AGV_path = os.environ.get('AGV_PATH', '')
+    
+    AGV_yaml_path = os.path.join(
+        get_package_share_directory('icuas26_competition'),
+        'config',
+        AGV_path)
+    
+    AGV_vel = float(os.environ.get('AGV_VEL', '0.3'))
+    
+    launch_description.append(
+        Node(
+           package='icuas26_competition',
+           executable='AGV.py',
+           name='AGV',
+           namespace='AGV',
+           output='screen',
+           parameters=[
+                {"velocity": AGV_vel},
+                {"publish_rate": 10.0},
+                {"yaml_path": AGV_yaml_path}
+            ]
+       ))
       
-        # Add vel_mux nodes dynamically based on the number parameter
+    # Add vel_mux nodes dynamically based on the number parameter
     for i in range(1, int(os.environ.get('NUM_ROBOTS', '4')) + 1):
         namespace = f'cf_{i}'
         vel_mux_node = Node(

@@ -30,6 +30,7 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/TransformWorld2Odom.py
   scripts/charging.py
+  scripts/AGV.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
