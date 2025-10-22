@@ -9,6 +9,8 @@ Panels:
         - /Axes1
         - /Map1
         - /Map1/Topic1
+        - /Path1
+        - /Path1/Topic1
       Splitter Ratio: 0.5
     Tree Height: 674
   - Class: rviz_common/Selection
@@ -118,7 +120,7 @@ Visualization Manager:
       Enabled: true
       Name: Marker
       Namespaces:
-        current_point: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -149,7 +151,7 @@ Visualization Manager:
       Shaft Length: 0.10000000149011612
       Topic:
         Depth: 5
-        Durability Policy: Volatile
+        Durability Policy: Transient Local
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
@@ -237,5 +239,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1166
-  X: 1394
-  Y: 202
+  X: 446
+  Y: 185

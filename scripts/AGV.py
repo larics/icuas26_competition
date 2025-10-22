@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, PoseStamped
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Path
 from visualization_msgs.msg import Marker
 import numpy as np
@@ -25,11 +26,18 @@ def interpolate_3d(points, velocity, frequency):
 class InterpolatorNode(Node):
     def __init__(self):
         super().__init__('interpolator_node')
+        
+        qos_profile = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,  # <--- Latching!
+            history=QoSHistoryPolicy.KEEP_LAST,
+            reliability=rclpy.qos.QoSReliabilityPolicy.RELIABLE
+        )
 
         # Publishers
         self.point_pub = self.create_publisher(Point, 'pose', 10)
         self.marker_pub = self.create_publisher(Marker, 'pose_marker', 10)
-        self.path_pub = self.create_publisher(Path, 'path', 1)
+        self.path_pub = self.create_publisher(Path, 'path', qos_profile)
 
         # Parameters
         self.declare_parameter('velocity', 1.0)       # meters per second
