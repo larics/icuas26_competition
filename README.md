@@ -94,7 +94,8 @@ Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_compe
 > This will not spawn aruco markers. Place them on your own to test!
 
 #### Interesting topics
-
+* `cf_x/pose` - pose (can be used for feedback)
+* `cf_x/velocity` - velocity (can be used for feedback)
 * `cf_x/odom` - odometry (can be used for feedback)
 * `cf_x/image` - image from camera (the name of the topic can be changed)
 * `cf_x/battery_status` - percentage of the battery and general state
