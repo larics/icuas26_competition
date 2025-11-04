@@ -5,7 +5,7 @@ from pathlib import Path
 from rclpy.node import Node
 from std_msgs.msg import Bool
 from sensor_msgs.msg import BatteryState
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
 
 class GzServiceNode(Node):
     def __init__(self):
@@ -28,11 +28,12 @@ class GzServiceNode(Node):
         # Parse the charging area
         charging_area = data.get('charging_area', {})
         self.charging_area = [charging_area.get('upper_left', None), charging_area.get('down_right', None)]
+        self.get_logger().info(f"Loaded charging points{self.charging_area} from {charging_yaml_file}")
 
         
-        self.odom_subscribers = {}
+        self.pose_subscribers = {}
         self.battery_subscribers = {}
-        self.odom_data = {}
+        self.pose_data = {}
         self.status_flags = {}
         self.publish_start = {}
         self.publish_stop = {}
@@ -40,13 +41,13 @@ class GzServiceNode(Node):
         
         for i  in range (1,self.num_cf+1):
             namespace = f'cf_{i}'
-            topic = f'/{namespace}/odom'
-            self.odom_data[namespace] = Odometry()
+            topic = f'/{namespace}/pose'
+            self.pose_data[namespace] = PoseStamped()
             self.status_flags[namespace] = BatteryState().POWER_SUPPLY_STATUS_DISCHARGING
-            self.odom_subscribers[namespace] = self.create_subscription(
-                Odometry,
+            self.pose_subscribers[namespace] = self.create_subscription(
+                PoseStamped,
                 topic,
-                lambda msg, ns=namespace: self.odom_callback(msg, ns),
+                lambda msg, ns=namespace: self.pose_callback(msg, ns),
                 10
             )
             self.battery_subscribers[namespace] = self.create_subscription(
@@ -61,16 +62,20 @@ class GzServiceNode(Node):
     def odom_callback(self, msg, namespace):
         # Save the odometry data in the dictionary
         self.odom_data[namespace] = msg
+    
+    def pose_callback(self, msg, namespace):
+        # Save the pose data in the dictionary
+        self.pose_data[namespace] = msg
         
     def battery_callback(self, msg, namespace):
-        # Save the odometry data in the dictionary
+        # Save the battery data in the dictionary
         self.status_flags[namespace] = msg.power_supply_status
         
 
     def timer_callback(self):
         
-        for key, msg in self.odom_data.items():
-            if (msg.pose.pose.position.z < self.min_height) and (msg.pose.pose.position.x<self.charging_area[1][0])  and (msg.pose.pose.position.x>self.charging_area[0][0]) and (msg.pose.pose.position.y<self.charging_area[0][1])  and (msg.pose.pose.position.y>self.charging_area[1][1]):
+        for key, msg in self.pose_data.items():
+            if (msg.pose.position.z < self.min_height) and (msg.pose.position.x<self.charging_area[1][0])  and (msg.pose.position.x>self.charging_area[0][0]) and (msg.pose.position.y<self.charging_area[0][1])  and (msg.pose.position.y>self.charging_area[1][1]):
                 if self.status_flags[key] == BatteryState().POWER_SUPPLY_STATUS_DISCHARGING:
                     msg = Bool()
                     msg.data = True
