@@ -25,7 +25,7 @@
       <shadows>true</shadows>
     </scene>
     <model name="ground_plane">
-      <pose>0.0 0.0 0 0 0</pose>
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
       <static>true</static>
       <link name="link">
         <collision name="collision">

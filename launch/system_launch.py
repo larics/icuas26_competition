@@ -47,10 +47,11 @@ def generate_launch_description():
         'config',
         'gz_bridge.yaml')
     
+    charging_file = os.environ.get('CHARGING_FILE', '')
     charge_yaml = os.path.join(
         get_package_share_directory('icuas26_competition'),
         'config',
-        'charging.yaml')
+        charging_file)
 
     launch_description = []
     launch_description.append(
@@ -80,7 +81,7 @@ def generate_launch_description():
            parameters=[
                 {"num_cf": num_bots},
                 {"charging_area_yaml": charge_yaml},
-                {"min_height": 0.07}
+                {"min_height": 0.2}
             ]
        ))
     

@@ -60,6 +60,24 @@ for ((i=1; i<=num_robots; i++)); do
   lazy: false
   direction: ROS_TO_GZ
 
+- ros_topic_name: "cf_${i}/start_power_drain"
+  gz_topic_name: "cf_${gz_index}/start_power_drain"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "ignition.msgs.Empty"
+  subscriber_queue: 10
+  publisher_queue: 10
+  lazy: false
+  direction: ROS_TO_GZ
+
+- ros_topic_name: "cf_${i}/stop_power_drain"
+  gz_topic_name: "cf_${gz_index}/stop_power_drain"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "ignition.msgs.Empty"
+  subscriber_queue: 10
+  publisher_queue: 10
+  lazy: false
+  direction: ROS_TO_GZ
+
 EOF
 done
 
