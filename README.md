@@ -70,14 +70,14 @@ docker rm crazysim_icuas_cont
 If you remove the container, you can always rebuild it from scratch by using `first_run.sh` script. 
 
 
-The containers `crazysim_icuas_cont` consists of packages for Crazyflies simulator [CrazySim](https://github.com/gtfactslab/CrazySim). General information about Crazyflies can be found [here](https://www.bitcraze.io/products/crazyflie-2-1/).
+The container `crazysim_icuas_cont` consists of packages for Crazyflies simulator [CrazySim](https://github.com/gtfactslab/CrazySim). General information about Crazyflies can be found [here](https://www.bitcraze.io/products/crazyflie-2-1/).
 
 > [!NOTE]
-> The ros2 workspace is located in /root/CrazySim/ros2_ws
+> The ros2 workspace is located in /root/ros2_ws
 
 ### RUN EMPTY WORLD EXAMPLE
 
-Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_competition/startup` (you can use alias `cd_icuas26_competition` that will place you in icuas26_competition package). Start the example: 
+Once inside the container, navigate to `/root/ros2_ws/src/icuas26_competition/startup` (you can use alias `cd_icuas26_competition` that will place you in icuas26_competition package). Start the example: 
 
 ```
 ./start.sh
@@ -85,18 +85,16 @@ Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_compe
 
 If needed, make startup script executable with `chmod +x start.sh`. It starts the example with 5 Crazyflies and 5 aruco markers in an empty world. To test that everything is working, in the first pane of the second window you can start `teleop_twist`, which is already in history. It controls the Crazyflie with id `cf_1`.
 
-### RUN CITY_1 WORLD EXAMPLE
-Once inside the container, navigate to `/root/CrazySim/ros2_ws/src/icuas26_competition/startup`. Edit the `_setup.sh` script to export `ENV_NAME=city_1_world`, then start everything with:
+### RUN ICUAS26_1 WORLD EXAMPLE
+Once inside the container, navigate to `/root/ros2_ws/src/icuas26_competition/startup`. Edit the `_setup.sh` script to export `KEYWORD=icuas26_1`, then start everything with:
 ```
 ./start.sh
 ```
-> [!NOTE]
-> This will not spawn aruco markers. Place them on your own to test!
+In this world, you will be able to see landing spots. When the UAV lands on a spot, battery power draining stops, and when it takes off, draining resumes. 
 
 #### Interesting topics
 * `cf_x/pose` - pose (can be used for feedback)
 * `cf_x/velocity` - velocity (can be used for feedback)
-* `cf_x/odom` - odometry (can be used for feedback)
 * `cf_x/image` - image from camera (the name of the topic can be changed)
 * `cf_x/battery_status` - percentage of the battery and general state
 
