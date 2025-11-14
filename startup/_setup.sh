@@ -1,9 +1,9 @@
 #!/bin/bash
 
 export NUM_ROBOTS=5
-export KEYWORD=empty #icuas26_1 or empty
+export KEYWORD=icuas26_1 #icuas26_1 or empty
 export ENV_NAME=${KEYWORD}_world
-export SPAWN_POSE_DOC=positions.txt
+export SPAWN_POSE_DOC=positions_${KEYWORD}.txt
 export GZ_VERSION=garden
 export BINVOX_STL_LOCATION=""
 export COMM_RANGE=70
