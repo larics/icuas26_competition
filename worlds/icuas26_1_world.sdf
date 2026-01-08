@@ -171,10 +171,10 @@
       <pose>-8.828861161172268 4.476135054616707 1.4375598871624276 1.5707963267948966 0.0 -1.4726224733383262</pose>
       <uri>model://aruco_markers/aruco_marker_0027</uri>
     </include>
-    <include>
+    <!-- <include>
       <pose>0.5925772111302939 -0.3380866095353876 3.025700514795785 1.5707963267948966 0.0 0.6872236443077857</pose>
       <uri>model://aruco_markers/aruco_marker_0001</uri>
-    </include>
+    </include> -->
     <light type="directional" name="sun">
       <cast_shadows>true</cast_shadows>
       <pose>0 0 20 0 0 0</pose>
