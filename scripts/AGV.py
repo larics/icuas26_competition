@@ -2,6 +2,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Point, PoseStamped
+from std_srvs.srv import Trigger
 from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Path
 from visualization_msgs.msg import Marker
@@ -38,6 +39,13 @@ class InterpolatorNode(Node):
         self.point_pub = self.create_publisher(Point, 'pose', 10)
         self.marker_pub = self.create_publisher(Marker, 'pose_marker', 10)
         self.path_pub = self.create_publisher(Path, 'path', qos_profile)
+        
+        self.motion_active = False
+
+        # Start service
+        self.start_srv = self.create_service(Trigger,'start_motion',self.start_motion_callback)
+
+        self.get_logger().info("Interpolator ready. Waiting for /start_motion service call.")
 
         # Parameters
         self.declare_parameter('velocity', 1.0)       # meters per second
@@ -120,28 +128,41 @@ class InterpolatorNode(Node):
             path_msg.poses.append(pose)
         self.path_pub.publish(path_msg)
         self.get_logger().info(f"Published path with {len(self.path)} points.")
+    
+    def start_motion_callback(self, request, response):
+        if not self.motion_active:
+            self.motion_active = True
+            self.timer = self.create_timer(self.dt, self.publish_callback)
+            response.success = True
+            response.message = "AGV motion started."
+            self.get_logger().info("AGV started moving.")
+        else:
+            response.success = True
+            response.message = "AGV motion already active."
+        return response
 
     def publish_callback(self):
         """Move along the path and publish current position at fixed frequency."""
-        # Calculate motion
-        remaining_distance = self.dist_per_step
-        while remaining_distance > 0:
-            next_point = np.array(self.path[self.current_index + 1])
-            segment = next_point - self.current_position
-            seg_len = np.linalg.norm(segment)
+        if self.motion_active:
+            # Calculate motion
+            remaining_distance = self.dist_per_step
+            while remaining_distance > 0:
+                next_point = np.array(self.path[self.current_index + 1])
+                segment = next_point - self.current_position
+                seg_len = np.linalg.norm(segment)
 
-            if remaining_distance < seg_len:
-                # Move within this segment
-                direction = segment / seg_len
-                self.current_position += direction * remaining_distance
-                remaining_distance = 0
-            else:
-                # Jump to next point
-                self.current_position = next_point
-                remaining_distance -= seg_len
-                self.current_index += 1
-                if self.current_index >= len(self.path) - 1:
-                    self.current_index = 0  # loop back to start
+                if remaining_distance < seg_len:
+                    # Move within this segment
+                    direction = segment / seg_len
+                    self.current_position += direction * remaining_distance
+                    remaining_distance = 0
+                else:
+                    # Jump to next point
+                    self.current_position = next_point
+                    remaining_distance -= seg_len
+                    self.current_index += 1
+                    if self.current_index >= len(self.path) - 1:
+                        self.current_index = 0  # loop back to start
 
         # --- Publish geometry_msgs/Point ---
         msg = Point()

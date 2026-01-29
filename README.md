@@ -109,6 +109,12 @@ If you are working in the group and you are all using the same network, please c
 
 ## AGV
 The ground vehicle is not shown in the gazebo, however its position is being published on ` AGV/pose `. AGV's pose can be visualized in RVIZ with a marker and subscribing to the topic ` AGV/pose_marker `, which will show small sphere moving around. You can set up its velocity as an environment variable `AGV_VEL` and you can change its traveling path by setting config file with points and the environment variable ` AGV_PATH `. You can see the example in config/AGV_path_empty.yaml
+When the simulation starts, the AGV remains stationary at the first point of its path. To start its motion, call the ```AGV/start_motion``` service of type ```std_srvs/srv/Trigger```. For example, from a terminal: 
+``` bash
+# Start AGV motion
+ros2 service call /AGV/start_motion std_srvs/srv/Trigger 
+
+```
 
 ## Creating and working with Octomaps
 If you install `octomap_ros` package, and all its derivatives for ROS, you will be good to go to attempt to convert 3D models into octomaps. We have included a binary that converts an `.stl` file into a `.binvox` file. It is located in `scripts` folder and is called `binvox`. You can use it as follows:
