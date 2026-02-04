@@ -94,7 +94,7 @@ In this world, you will be able to see landing spots. When the UAV lands on a sp
 
 #### Interesting topics
 * `cf_x/pose` - pose (can be used for feedback)
-* `cf_x/velocity` - velocity (can be used for feedback)
+* `cf_x/velocity` - velocity in body frame (can be used for feedback)
 * `cf_x/image` - image from camera (the name of the topic can be changed)
 * `cf_x/battery_status` - percentage of the battery and general state
 
