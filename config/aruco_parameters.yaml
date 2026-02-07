@@ -4,7 +4,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_1/image
     camera_info_topic: /cf_1/camera_info
-    camera_frame: world
+    camera_frame: cf_1/camera
 
 /cf_2/aruco_node:
   ros__parameters:
@@ -12,7 +12,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_2/image
     camera_info_topic: /cf_2/camera_info
-    camera_frame: world
+    camera_frame: cf_2/camera
 
 /cf_3/aruco_node:
   ros__parameters:
@@ -20,7 +20,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_3/image
     camera_info_topic: /cf_3/camera_info
-    camera_frame: world
+    camera_frame: cf_3/camera
 
 /cf_4/aruco_node:
   ros__parameters:
@@ -28,7 +28,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_4/image
     camera_info_topic: /cf_4/camera_info
-    camera_frame: world
+    camera_frame: cf_4/camera
 
 /cf_5/aruco_node:
   ros__parameters:
@@ -36,7 +36,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_5/image
     camera_info_topic: /cf_5/camera_info
-    camera_frame: world
+    camera_frame: cf_5/camera
 
 /cf_6/aruco_node:
   ros__parameters:
@@ -44,7 +44,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_6/image
     camera_info_topic: /cf_6/camera_info
-    camera_frame: world
+    camera_frame: cf_6/camera
 
 /cf_7/aruco_node:
   ros__parameters:
@@ -52,7 +52,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_7/image
     camera_info_topic: /cf_7/camera_info
-    camera_frame: world
+    camera_frame: cf_7/camera
 
 /cf_8/aruco_node:
   ros__parameters:
@@ -60,7 +60,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_8/image
     camera_info_topic: /cf_8/camera_info
-    camera_frame: world
+    camera_frame: cf_8/camera
 
 /cf_9/aruco_node:
   ros__parameters:
@@ -68,7 +68,7 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_9/image
     camera_info_topic: /cf_9/camera_info
-    camera_frame: world
+    camera_frame: cf_9/camera
 
 /cf_10/aruco_node:
   ros__parameters:
@@ -76,4 +76,4 @@
     aruco_dictionary_id: DICT_5X5_250
     image_topic: /cf_10/image
     camera_info_topic: /cf_10/camera_info
-    camera_frame: world
+    camera_frame: cf_10/camera
